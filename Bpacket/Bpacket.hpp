@@ -1,19 +1,25 @@
 
 #pragma once
 
-#include "SEP.hpp"
-#include "../DynamicArray/DynamicArray.hpp"
+#include "../../DataStore/DynamicArray.hpp"
+// Status codes
+#include "../../Status/Status.hpp"
 
 namespace Packet {
 
+typedef uint8_t Data_t;
+
 // A packet of buffered (randomly accessible) data and an associated status.
 // Limited to a 2^16-1 byte count.
-class Bpacket : public DynamicArray<SEP::Data_t, uint16_t> {
-// Current status
-  SEP::Status_t status;
+#define BPACKET_CAPACITY_T uint16_t
+class Bpacket : public DataStore::DynamicArray<Data_t, BPACKET_CAPACITY_T> {
+  // Current status
+  Status::Status_t status;
 
 public:
-  virtual SEP::Status_t sinkStatus(SEP::Status_t new_status){
+  typedef BPACKET_CAPACITY_T Capacity_t;
+
+  virtual Status::Status_t sinkStatus(Status::Status_t new_status){
     status = new_status;
   }
 };
@@ -26,7 +32,7 @@ public:
 //   Good indicates accepted;
 //   Bad indicates rejected;
 //   Busy indicates busy (not accepted).
-  virtual SEP::Status_t sinkPacket(Bpacket *new_packet) = 0;
+  virtual Status::Status_t sinkPacket(Bpacket *new_packet) = 0;
 };
 
 // End namespace: SEP

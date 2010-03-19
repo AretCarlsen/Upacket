@@ -25,12 +25,12 @@ private:
   bool controlCollisionInProgress;
 
 // SEP-encoded outgoing data
-  DataTransfer::DataSink<SEP::Data_t, SEP::Status_t> *outputSink;
+  DataTransfer::DataSink<SEP::Data_t, Status::Status_t> *outputSink;
 
 public:
 
 // Constructor
-  SEPEncoder(DataTransfer::DataSink<SEP::Data_t, SEP::Status_t> *new_outputSink)
+  SEPEncoder(DataTransfer::DataSink<SEP::Data_t, Status::Status_t> *new_outputSink)
   : outputSink(new_outputSink),
     packet(NULL),
     controlCollisionInProgress(false)
@@ -41,11 +41,11 @@ public:
 
 // Accept a packet to be encoded.
 // Non-blocking. May return Good, Busy, or Bad (rejected).
-  SEP::Status_t sinkPacket(SEP::Packet::Bpacket *new_packet);
+  Status::Status_t sinkPacket(SEP::Packet::Bpacket *new_packet);
 
 
 // Continue encoding the packet.
-  Process::Status_t process();
+  Status::Status_t process();
 
 // Reset the encoder.
   void reset(){

@@ -10,7 +10,7 @@
 
 // If Busy is returned, then the Decoder was not able to allocate sufficient memory.
 // The caller may try again.
-DataTransfer::Status_t SEP::SEPDecoder::sinkData(SEP::Data_t data){
+Status::Status_t SEP::SEPDecoder::sinkData(SEP::Data_t data){
 // Start a new packet, if necessary.
   if(packet == NULL){
   // Attempt to allocate a new packet.
@@ -35,7 +35,7 @@ STATE_MACHINE__BEGIN(state);
 
 // Possible opcode received.
 
-  SEP::Status_t tempStatus;
+  Status::Status_t tempStatus;
 
   // If the byte received immediately following a control byte does not
   // match the control prefix, then the sender actually intended to send

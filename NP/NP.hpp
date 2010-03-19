@@ -1,8 +1,9 @@
 #pragma once
 
 #include "../../DataTransfer/DataTransfer.hpp"
-#include "../../DynamicArray/DynamicArray.hpp"
+#include "../../DataStore/DynamicArray.hpp"
 #include "../Bpacket/Bpacket.hpp"
+#include "../../Process/Process.hpp"
 
 namespace NP {
 
@@ -12,21 +13,24 @@ namespace NP {
 class NPEncoder : public Packet::BpacketSink, public Process {
 private:
 // NP-encoded outgoing data
-  DataTransfer::DataSink<uint8_t, DataTransfer::Status_t> *dataSink;
+  DataTransfer::DataSink<uint8_t, Status::Status_t> *dataSink;
 
 // Current packet
   Packet::Bpacket* packet;
 
+// Current packet data pointer
+  Packet::Data_t *packetData;
+
 public:
 
 // Constructor
-  NewlinePacketSink(DataTransfer::DataSink<SEP::Data_t, DataTransfer::Status_t> *new_dataSink)
+  NPEncoder(DataTransfer::DataSink<SEP::Data_t, Status::Status_t> *new_dataSink)
   : dataSink(new_dataSink),
     packet(NULL)
   { }
 
 // Accept a packet to be encoded
-  Packet::Status_t sinkPacket(Bpacket *new_packet){
+  Status::Status_t sinkPacket(Packet::Bpacket *new_packet){
     if(packet != NULL)
       return Packet::Status__Busy;
 
@@ -35,7 +39,7 @@ public:
   }
 
 // Continue encoding the packet.
-  Process:Status_t process(){
+  Status::Status_t process(){
   // Anything to process?
     if(packet == NULL)
       return Process::Status__Good;
@@ -66,7 +70,7 @@ public:
 // Decode packets from an encoded byte stream.
 //
 // Newlines are interpreted as Complete status events. Exclamation points are Bad (abort packet).
-class NPDecoder : public DataTransfer::DataSink<uint8_t, DataTransfer::Status_t> {
+class NPDecoder : public DataTransfer::DataSink<uint8_t, Status::Status_t> {
 private:
 
   Packet::BpacketSink *packetSink;
@@ -80,13 +84,20 @@ private:
 public:
 
 // Constructor
-  NPDecoder(BpacketSink *new_packetSink)
+  NPDecoder(Packet::BpacketSink *new_packetSink)
   : packetSink(new_packetSink),
     packet(NULL)
   { }
 
+// Expand the current packet.
+  bool enlargePacketCapacity(){
+    assert(packet != NULL);
+
+    return packet->setCapacity(packet->getCapacity() + PacketCapacity__Increment);
+  }
+
 // Accept NP-encoded data to be decoded.
-  DataTransfer::Status_t sinkData(SEP::Data_t data){
+  Status::Status_t sinkData(SEP::Data_t data){
     // Complete packet?
     if(data == '\n'){
       packetSink->sinkPacket(packet);
@@ -105,7 +116,7 @@ public:
           return DataTransfer::Status__Busy;
 
   // Enlarge the packet, if necessary
-      }else if( packet->bufferIsFull() && !(packet->enlargeCapacity(SEP::PacketCapacity)) )
+      }else if( packet->isFull() && !(enlargePacketCapacity()) )
         return DataTransfer::Status__Busy;
 
       packet->append(data);
@@ -126,17 +137,10 @@ public:
 // Allocate a new packet.
   bool generateNewPacket(){
   // Attempt to allocate initial packet
-    packet = (Bpacket*) malloc(sizeof(Bpacket));
+    packet = (Packet::Bpacket*) malloc(sizeof(Packet::Bpacket));
     if(packet == NULL)
       return false;
-    packet->constructor(SEP::PacketCapacity__Initial);
-  )
-
-// Expand the current packet.
-  bool expandPacket(){
-    assert(packet != NULL);
-
-    return packet->setCapacity(packet->getCapacity() + PacketCapacity__Increment))
+    packet->constructor(PacketCapacity__Initial);
   }
 };
 

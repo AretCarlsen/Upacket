@@ -10,7 +10,7 @@
 #include <stdio.h>
 
 // Begin processing a new packet
-SEP::Status_t SEP::SEPEncoder::sinkPacket(SEP::Packet *new_packet){
+Status::Status_t SEP::SEPEncoder::sinkPacket(SEP::Packet *new_packet){
   // Busy? Then refuse to accept.
   if(isBusy())
     return SEP::Status__Busy;
@@ -27,7 +27,7 @@ SEP::Status_t SEP::SEPEncoder::sinkPacket(SEP::Packet *new_packet){
 
 // Process the current packet.
 // Returns Good normally.
-Process::Status_t SEP::SEPEncoder::process(){
+Status::Status_t SEP::SEPEncoder::process(){
   // If not busy (no packet in progress), return immediately.
   if(! isBusy())
     return SEP::Status__Complete;

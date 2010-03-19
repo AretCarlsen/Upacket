@@ -4,7 +4,9 @@
 
 #pragma once
 
-#include "../DataTransfer/DataSource.hpp"
+#include "../../DataTransfer/DataSource.hpp"
+// Status codes
+#include "../../Status/Status.hpp"
 
 namespace SEP {
 // Control prefix information
@@ -29,17 +31,6 @@ namespace SEP {
 
 // Data
   typedef uint8_t Data_t;
-
-// Status codes
-  typedef uint8_t Status_t;
-// Successful / Acceptable
-  static const Status_t Status__Good = 0;
-// Rejected / Aborted
-  static const Status_t Status__Bad = 1;
-// Busy / In Progress / Unavailable
-  static const Status_t Status__Busy = 2;
-// Completed / Finished
-  static const Status_t Status__Complete = 3;
 
   inline bool isControlByte(uint8_t byte){
     return (byte == DefaultControlPrefix);

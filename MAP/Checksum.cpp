@@ -57,3 +57,106 @@ const uint32_t Checksum::ChecksumTable[256] = {
   0x2d02ef8dL
 };
 
+// Validate a MAP packet's checksum.
+//
+// If packet does not include a checksum or the checksum does not match the packet's data,
+// returns false. If the converse, returns true.
+bool validateChecksum(MAP::MAPPacket *packet){
+// Make sure packet includes a checksum
+  if(!(
+       packet->getChecksumPresent()
+    && (packet->getSize() > ChecksumLength + 1)
+  ))
+    return false;
+
+  // Generate checksum
+  Checksum_t checksum = ChecksumInitialValue;
+  MAP::Data_t *packetData = packet->front();
+  for(uint8_t i = packet->getSize() - 4; i > 0; i--){
+  // Actual checksum calculation, relying on 1kb table
+    checksum = checksumEngine(checksum, *packetData);
+    packetData++;
+  }
+  // Note that packetData is left pointing at the first checksum byte.
+
+  // Validate checksum
+  for(uint8_t i = ChecksumLength; i > 0; i--){
+  // Validate 1/4 of checksum.
+    // This may not be the most efficient way to extract the LSB from the csum.
+    // A cast to uint8_t could be better, for instance.
+    if(*packetData != (checksum & 0xFF))
+      return false;
+
+    packetData++;
+  }
+
+  // Checksum was valid.
+  return true;
+}
+
+/*
+// Checksums are always generated where the byte is treated as containing the CSumPresent bit.
+uint32_t generateChecksum(MAP::Packet *packet){
+  // Initialize checksum. (Don't bother storing 4-byte initial value? Which is 0xFFFFFFFF.)
+  Checksum_t checksum = ChecksumInitialValue;
+
+  // Feed the packet contents into the checksum engine
+  uint8_t *packetData = packet->getStartPointer();
+  uint8_t packetLength = packet->length();
+
+// Checksum is over the packet data only
+  if(packet->headerByte() & MAP::ChecksumPresentMask)
+    packetLength -= ChecksumLength;
+  else
+    headerByte =
+
+  for(uint8_t i = packet->length(); i > 0; i--){
+  // Actual checksum calculation, relying on 1kb table
+    checksum = PosixCRC32ChecksumTable[(uint8_t) checksum ^ *packetData] ^ (checksum >> 8);
+    packetData++;
+  }
+
+  // Invert
+  return ~checksum;
+}
+*/
+
+// Returns true if the packet already contained a checksum or a checksum has been successfully appended.
+// False otherwise (e.g. if unable to append sufficient memory).
+bool appendChecksum(MAP::MAPPacket *packet){
+  // Check is packet already contains checksum
+  if(packet->getChecksumPresent())
+    return true;
+
+  // Make sure packet has sufficient buffer capacity to store the additional 4 CRC bytes.
+  if(packet->getCapacity() - packet->getSize() < ChecksumLength){
+    // Attempt to increase capacity
+    if(! packet->setCapacity(packet->getCapacity() + ChecksumLength))
+      return false;
+  }
+
+  // Set checksum presence bit
+  packet->setChecksumPresent(true);
+
+  // Generate checksum
+  Checksum_t checksum = ChecksumInitialValue;
+  MAP::Data_t *packetData = packet->front();
+  for(uint8_t i = packet->getSize(); i > 0; i--){
+  // Actual checksum calculation, relying on 1kb table
+    checksum = checksumEngine(checksum, *packetData);
+    packetData++;
+  }
+
+  // Append checksum
+  for(uint8_t i = 4; i > 0; i--){
+   // Append byte
+    packet->append(checksum & 0xFF);
+   // Right-shift checksum by one byte
+    checksum >> 8;
+  }
+
+  return true;
+}
+
+
+

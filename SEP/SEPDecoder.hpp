@@ -13,13 +13,13 @@
 namespace SEP {
 
 // Decode packets from an encoded byte stream.
-class SEPDecoder : public DataTransfer::DataSink<uint8_t, DataTransfer::Status_t> {
+class SEPDecoder : public DataTransfer::DataSink<uint8_t, Status::Status_t> {
 private:
 // State machine
   StateMachine state;
 
-  BpacketSink *packetSink;
-  Bpacket *packet;
+  Packet::BpacketSink *packetSink;
+  Packet::Bpacket *packet;
 
 // Initial packet capacity, in bytes
   static const uint8_t PacketCapacity__Initial = 20;
@@ -29,7 +29,7 @@ private:
 public:
 
 // Constructor
-  SEPDecoder(BpacketSink *new_packetSink)
+  SEPDecoder(Packet::BpacketSink *new_packetSink)
   : packetSink(new_packetSink),
     packet(NULL)
   {
@@ -37,7 +37,7 @@ public:
   }
 
 // Accept SEP-encoded data to be decoded.
-  SEP::Status_t sinkData(SEP::Data_t data);
+  Status::Status_t sinkData(SEP::Data_t data);
 
 // Reset decoder.
   void reset(){
@@ -55,17 +55,17 @@ public:
 // Allocate a new packet.
   bool generateNewPacket(){
   // Attempt to allocate initial packet
-    packet = (Bpacket*) malloc(sizeof(Bpacket));
+    packet = (Packet::Bpacket*) malloc(sizeof(Packet::Bpacket));
     if(packet == NULL)
       return false;
-    packet->constructor(SEP::PacketCapacity__Initial);
-  )
+    packet->constructor(PacketCapacity__Initial);
+  }
 
 // Expand the current packet.
   bool expandPacket(){
     assert(packet != NULL);
 
-    return packet->setCapacity(packet->getCapacity() + PacketCapacity__Increment))
+    return packet->setCapacity(packet->getCapacity() + PacketCapacity__Increment);
   }
 };
 
