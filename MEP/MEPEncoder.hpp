@@ -1,9 +1,10 @@
-// SEPEncoder class declaration
+// MEPEncoder class declaration
 
 #pragma once
 
-#include "SEP.hpp"
+#include "MEP.hpp"
 #include "../Bpacket/Bpacket.hpp"
+#include "../MAP/MAP.hpp"
 #include "../../StateMachine/StateMachine.hpp"
 #include "../../DataTransfer/DataTransfer.hpp"
 #include "../../Process/Process.hpp"
@@ -12,28 +13,34 @@
 #define NULL 0
 #endif
 
-namespace SEP {
+namespace MEP {
 
 // Encode a packet to an outgoing bytestream.
-class SEPEncoder : public Packet::BpacketSink, public Process {
+class MEPEncoder : public Packet::BpacketSink, public MAP::MAPPacketSink, public Process {
 private:
 // Current packet
-  Packet::Bpacket* packet;
+  Packet::Bpacket *packet;
+// Current packet data
+  Packet::Data_t *packetData;
 
 // State machine
   StateMachine state;
   bool controlCollisionInProgress;
 
-// SEP-encoded outgoing data
-  DataTransfer::DataSink<SEP::Data_t, Status::Status_t> *outputSink;
+// MEP-encoded outgoing data
+  DataTransfer::DataSink<MEP::Data_t, Status::Status_t> *outputSink;
+
+// Track if free at end is required.
+  bool isMAP;
 
 public:
 
 // Constructor
-  SEPEncoder(DataTransfer::DataSink<SEP::Data_t, Status::Status_t> *new_outputSink)
+  MEPEncoder(DataTransfer::DataSink<MEP::Data_t, Status::Status_t> *new_outputSink)
   : outputSink(new_outputSink),
     packet(NULL),
-    controlCollisionInProgress(false)
+    controlCollisionInProgress(false),
+    isMAP(false)
   {
     STATE_MACHINE__RESET(state);
   }
@@ -41,8 +48,10 @@ public:
 
 // Accept a packet to be encoded.
 // Non-blocking. May return Good, Busy, or Bad (rejected).
-  Status::Status_t sinkPacket(SEP::Packet::Bpacket *new_packet);
-
+  Status::Status_t sinkPacket(Packet::Bpacket *new_packet);
+  Status::Status_t sinkPacket(MAP::MAPPacket *new_packet){
+    sinkPacket((Packet::Bpacket*) new_packet);
+  }
 
 // Continue encoding the packet.
   Status::Status_t process();
@@ -50,15 +59,16 @@ public:
 // Reset the encoder.
   void reset(){
     STATE_MACHINE__RESET(state);
+    Packet::dereferencePacket(packet);
     packet = NULL;
     controlCollisionInProgress = false;
   }
 
-  void isBusy(){
+  bool isBusy(){
     return (packet != NULL);
   }
 };
 
-// End namespace: SEP
+// End namespace: MEP
 }
 

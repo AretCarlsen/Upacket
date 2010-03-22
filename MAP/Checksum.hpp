@@ -11,14 +11,12 @@
 
 #pragma once
 
+#include "../globals.hpp"
+
 #include "../../DataTransfer/DataSource.hpp"
-#include "../SEP/SEP.hpp"
+#include "../MEP/MEP.hpp"
 #include "../../StateMachine/StateMachine.hpp"
 #include "MAP.hpp"
-
-#ifndef NULL
-#define NULL 0
-#endif
 
 namespace MAP {
 
@@ -27,13 +25,13 @@ typedef uint32_t Checksum_t;
 // Checksum length (32 bits)
 static const uint8_t ChecksumLength = 4;
 // Initial checksum value (inverted 0)
-Checksum_t ChecksumInitialValue = 0xFFFFFFFF;
+static const Checksum_t ChecksumInitialValue = 0xFFFFFFFF;
 // Checksum table is indexable by any single byte. Its size, therefore, is 2^8.
 extern const uint32_t ChecksumTable[256];
 
 // Checksum generation engine.
 // Currently a simple one-liner, as is based on 1kB source table.
-Checksum_t checksumEngine(Checksum_t old_value, uint8_t new_data){
+inline Checksum_t checksumEngine(Checksum_t old_value, uint8_t new_data){
   return ChecksumTable[(uint8_t) old_value ^ new_data] ^ (old_value >> 8);
 }
 
@@ -54,6 +52,8 @@ bool validateChecksum(MAP::MAPPacket *packet);
 class ChecksumGenerator : public MAP::MAPPacketSink {
   MAP::MAPPacketSink *nextSink;
 
+public:
+
   ChecksumGenerator(MAP::MAPPacketSink *new_nextSink)
   : nextSink(new_nextSink)
   { }
@@ -73,6 +73,8 @@ class ChecksumGenerator : public MAP::MAPPacketSink {
 
 class ChecksumValidator : public MAP::MAPPacketSink {
   MAP::MAPPacketSink *nextSink;
+
+public:
 
   ChecksumValidator(MAP::MAPPacketSink *new_nextSink)
   : nextSink(new_nextSink)

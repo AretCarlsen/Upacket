@@ -1,6 +1,7 @@
-// SEP (S-Packet Encapsulation Protocol) definitions
+// MEP (Micro Encapsulation Protocol) definitions
 //
-// The S-Packet Encapsulation Protocol encodes an endless series of S-Packets over a raw serial data stream.
+// The Micro Encapsulation Protocol encodes an endless series of packets over a raw serial data stream..
+// Optimized for serial processing, small packets, and small addresses.
 
 #pragma once
 
@@ -8,7 +9,7 @@
 // Status codes
 #include "../../Status/Status.hpp"
 
-namespace SEP {
+namespace MEP {
 // Control prefix information
   typedef uint8_t ControlPrefix_t;
 // Mask for 2-bit opcode data at the end of the control prefix

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../../DataTransfer/DataTransfer.hpp"
-#include "../../DataStore/DynamicArray.hpp"
+#include "../../DataStore/Buffer.hpp"
 #include "../Bpacket/Bpacket.hpp"
 #include "../../Process/Process.hpp"
 
@@ -24,7 +24,7 @@ private:
 public:
 
 // Constructor
-  NPEncoder(DataTransfer::DataSink<SEP::Data_t, Status::Status_t> *new_dataSink)
+  NPEncoder(DataTransfer::DataSink<MEP::Data_t, Status::Status_t> *new_dataSink)
   : dataSink(new_dataSink),
     packet(NULL)
   { }
@@ -32,7 +32,7 @@ public:
 // Accept a packet to be encoded
   Status::Status_t sinkPacket(Packet::Bpacket *new_packet){
     if(packet != NULL)
-      return Packet::Status__Busy;
+      return Status::Status__Busy;
 
     packet = new_packet;
     packetData = packet->front();
@@ -42,28 +42,28 @@ public:
   Status::Status_t process(){
   // Anything to process?
     if(packet == NULL)
-      return Process::Status__Good;
+      return Status::Status__Good;
 
   // Process any available data.
     while(packetData < packet->back()){
     // Attempt to sink the data.
-      if(dataSink->sinkData(*packetData) != DataTransfer::Status__Good)
-        return Process::Status__Good;
+      if(dataSink->sinkData(*packetData) != Status::Status__Good)
+        return Status::Status__Good;
 
     // Iterate.
       packetData++;
     }
 
   // Attempt to sink end-of-packet
-    if(dataSink->sinkData('\n') != DataTransfer::Status__Good)
-      return Process::Status__Good;
+    if(dataSink->sinkData('\n') != Status::Status__Good)
+      return Status::Status__Good;
 
   // Indicate packet complete
-    packet->sinkStatus(Packet::Status__Complete);
+    packet->sinkStatus(Status::Status__Complete);
   // Reset state
     packet = NULL;
 
-    return Process::Status__Good;
+    return Status::Status__Good;
   }
 };
 
@@ -93,11 +93,11 @@ public:
   bool enlargePacketCapacity(){
     assert(packet != NULL);
 
-    return packet->setCapacity(packet->getCapacity() + PacketCapacity__Increment);
+    return packet->set_capacity(packet->get_capacity() + PacketCapacity__Increment);
   }
 
 // Accept NP-encoded data to be decoded.
-  Status::Status_t sinkData(SEP::Data_t data){
+  Status::Status_t sinkData(MEP::Data_t data){
     // Complete packet?
     if(data == '\n'){
       packetSink->sinkPacket(packet);
@@ -112,36 +112,46 @@ public:
   // Start a new packet, if necessary.
       if(packet == NULL){
     // Attempt to allocate a new packet.
-        if(! generateNewPacket())
-          return DataTransfer::Status__Busy;
+        if(! allocateNewPacket())
+          return Status::Status__Busy;
 
   // Enlarge the packet, if necessary
-      }else if( packet->isFull() && !(enlargePacketCapacity()) )
-        return DataTransfer::Status__Busy;
+      }else if( packet->is_full() && !(enlargePacketCapacity()) )
+        return Status::Status__Busy;
 
       packet->append(data);
 
     }
 
-    return DataTransfer::Status__Good;
+    return Status::Status__Good;
   }
 
 // Discard the current packet.
   void discardPacket(){
-    // Discard the packet
-    packet->deconstructor();
-    free(packet);
+    Packet::dereferencePacket(packet);
     packet = NULL;
   }
 
 // Allocate a new packet.
-  bool generateNewPacket(){
-  // Attempt to allocate initial packet
-    packet = (Packet::Bpacket*) malloc(sizeof(Packet::Bpacket));
-    if(packet == NULL)
+  bool allocateNewPacket(){
+// Attempt to allocate initial packet
+    MAP::MAPPacket *newPacket = new MAP::MAPPacket;
+
+// Allocation failed? Return false.
+    if(newPacket == NULL)
       return false;
-    packet->constructor(PacketCapacity__Initial);
+
+// Attempt to allocate buffer storage
+    if(! newPacket->set_capacity(PacketCapacity__Initial)){
+      delete newPacket;
+      return false;
+    }
+
+// Save new packet.
+    packet = newPacket;
+    return true;
   }
+
 };
 
 // End namespace: NP

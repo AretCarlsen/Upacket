@@ -70,7 +70,7 @@ namespace MAP {
   static const AddressType_t AddressType__extended = 15;
 
 // Set a set of header bits to true/false.
-  void setHeaderMask(Data_t &header, uint8_t bit_mask, bool new_value){
+  inline void setHeaderMask(Data_t &header, uint8_t bit_mask, bool new_value){
     if(new_value)
       header |= bit_mask;
     else
@@ -143,6 +143,12 @@ public:
     set(0, new_value);
   }
 
+  Data_t* get_data(){
+    if(dataOffset == 0)
+      calcDataOffset();
+
+    return front() + dataOffset;
+  }
   Data_t get_data(Capacity_t index){
     if(dataOffset == 0)
       calcDataOffset();
@@ -175,6 +181,15 @@ public:
   // Data offset is difference between current position (at first byte of data)
   // and header byte position.
     dataOffset = byte - front();
+  }
+
+  Data_t* get_destAddress(){
+    assert(get_destAddressPresent());
+
+    if(get_size() < 2)
+      return NULL;
+
+    return get_data() + 1;
   }
 
 // Checksum presence
@@ -220,7 +235,7 @@ public:
 
 class MAPPacketSink {
 public:
-  Status::Status_t sinkPacket(MAPPacket *packet);
+  virtual Status::Status_t sinkPacket(MAPPacket *packet) = 0;
 };
 
 // End namespace: MAP
