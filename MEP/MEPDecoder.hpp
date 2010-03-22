@@ -51,20 +51,10 @@ public:
     packet = NULL;
   }
 
-/*
-// Allocate a new packet.
-  bool generateNewPacket(){
-    packet = packetStore->allocateNewPacket();
-    return (packet != NULL)
-  }
-*/
-
 // Allocate a new packet.
   bool allocateNewPacket(){
 // Attempt to allocate initial packet
     MAP::MAPPacket *newPacket = new MAP::MAPPacket;
-
-DEBUGprint((stderr, "test 1\n"));
 
 // Allocation failed? Return false.
     if(newPacket == NULL)
@@ -76,8 +66,12 @@ DEBUGprint((stderr, "test 1\n"));
       return false;
     }
 
+DEBUGprint("allocateNewPacket: Allocated new packet.\n");
+
 // Save new packet.
     packet = newPacket;
+    Packet::referencePacket(packet);
+
     return true;
   }
 

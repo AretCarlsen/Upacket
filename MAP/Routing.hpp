@@ -36,10 +36,13 @@ public:
 // and that the address is correct.
     if(   packet->get_addressType() != MAP::AddressType__DeviceLocalStatic
        || !(packet->get_destAddressPresent())
-       || !( *(packet->get_destAddress()) != address)
-    )
+       || ( *(packet->get_destAddress()) != address)
+    ){
+DEBUGprint("Binding filter: Blocking packet.\n");
       return Status::Status__Bad;
+    }
 
+DEBUGprint("Binding filter: Accepting packet. Dest address: %X\n", *(packet->get_destAddress()));
     return packetSink->sinkPacket(packet);
   }
 };
@@ -68,8 +71,10 @@ public:
     Packet::referencePacket(packet);
 
   // Does not stop after an acceptance.
-    for(MAPPacketSink **packetSink = sinks.front(); packetSink <= sinks.back(); packetSink++)
+    for(MAPPacketSink **packetSink = sinks.front(); packetSink < sinks.back(); packetSink++){
+packet->get_checksumPresent();
       (*packetSink)->sinkPacket(packet);
+    }
 
   // Free packet.
     Packet::dereferencePacket(packet);
@@ -89,17 +94,20 @@ public:
   { }
 
   Status::Status_t sinkPacket(MAP::MAPPacket *new_packet){
-    if(packet == NULL)
-      packet = new_packet;
+    if(packet != NULL)
+      return Status::Status__Bad;
+
+    packet = new_packet;
+// Note packet in use.
+    Packet::referencePacket(packet);
+
+    return Status::Status__Good;
   }
 
   void freePacket(){
     packet->sinkStatus(Status::Status__Complete);
-/*
-    packet->deconstructor();
-    free(packet);
+    Packet::dereferencePacket(packet);
     packet = NULL;
-*/
   }
 };
 

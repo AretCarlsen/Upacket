@@ -22,8 +22,6 @@ namespace MAP {
 
 // Checksum type
 typedef uint32_t Checksum_t;
-// Checksum length (32 bits)
-static const uint8_t ChecksumLength = 4;
 // Initial checksum value (inverted 0)
 static const Checksum_t ChecksumInitialValue = 0xFFFFFFFF;
 // Checksum table is indexable by any single byte. Its size, therefore, is 2^8.
@@ -85,10 +83,18 @@ public:
     assert(packet != NULL);
 
   // Validate checksum
-    if(validateChecksum(packet))
+    if(validateChecksum(packet)){
+      DEBUGprint("ChecksumValidator: Checksum valid.\n");
+
+  // Remove the checksum
+//      packet->set_size(packet->get_size() - 4);
+//      packet->set_checksumPresent(false);
+
       return nextSink->sinkPacket(packet);
-    else
+    }else{
+      DEBUGprint("ChecksumValidator: Checksum invalid.\n");
       return Status::Status__Bad;
+    }
   }
 };
 

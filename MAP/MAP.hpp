@@ -20,8 +20,12 @@ namespace MAP {
 // Lower nibble is Address Type
   static const MaskType_t AddressType_Mask = 0x0F;
 
+// Checksum length (32 bits)
+  static const uint8_t ChecksumLength = 4;
+
   typedef uint8_t Protocol_t;
-// No next proto. (Raw data instead, perhaps.)
+// No next proto. (Raw data enclosed, or perhaps the port is determined by the receiver
+// on the basis of the src and/or dest addresses.)
   static const Protocol_t Protocol__none   = 0;
 // Micro Addressed Protocol
   static const Protocol_t Protocol__MAP    = 1;
@@ -161,6 +165,29 @@ public:
 
     set(dataOffset + index, new_value);
   }
+// Get the data area size
+  Capacity_t get_data_size(){
+    if(dataOffset == 0)
+      calcDataOffset();
+
+    Capacity_t data_size = size;
+
+    if(data_size <= dataOffset)
+      return 0;
+
+    data_size -= dataOffset;
+
+    if(get_checksumPresent()){
+      if(data_size <= 4)
+        return 0;
+
+      data_size -= 4;
+    }
+
+DEBUGprint("Data offset: %u. Data size: %u. Checksum present: %u\n", dataOffset, data_size, get_checksumPresent());
+
+    return data_size;
+  }
 
   void calcDataOffset(){
     // Begin just after header byte.
@@ -170,12 +197,20 @@ public:
     if(get_destAddressPresent()){
       while(! Code78::isLastByte(*byte))
         byte++;
+      byte++;
     }
 
     // Step past src address, if present.
     if(get_srcAddressPresent()){
       while(! Code78::isLastByte(*byte))
         byte++;
+      byte++;
+    }
+
+    if(get_nextProtoPresent()){
+      while(! Code78::isLastByte(*byte))
+        byte++;
+      byte++;
     }
 
   // Data offset is difference between current position (at first byte of data)
@@ -189,7 +224,19 @@ public:
     if(get_size() < 2)
       return NULL;
 
-    return get_data() + 1;
+    return front() + 1;
+  }
+  Data_t* get_srcAddress(){
+    assert(get_destAddressPresent());
+
+    Data_t *data_ptr = get_destAddress();
+    while(! Code78::isLastByte(*data_ptr))
+      data_ptr++;
+    data_ptr++;
+    if(data_ptr >= back())
+      return NULL;
+
+    return data_ptr;
   }
 
 // Checksum presence

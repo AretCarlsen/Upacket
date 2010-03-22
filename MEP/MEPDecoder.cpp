@@ -11,12 +11,19 @@
 // If Busy is returned, then the Decoder was not able to allocate sufficient memory.
 // The caller may try again.
 Status::Status_t MEP::MEPDecoder::sinkData(MEP::Data_t data){
+
 // Start a new packet, if necessary.
   if(packet == NULL){
+DEBUGprint("sinkData: Processing new packet.\n");
   // Attempt to allocate a new packet.
     if(! allocateNewPacket())
       return Status::Status__Busy;
   }
+/*
+DEBUGprint("Init packet size: %X\n", packet->get_size());
+for(uint8_t i = packet->get_size(); i > 0; i --)
+  DEBUGprint("Packet byte: %X\n", packet->get(i));
+*/
 
 STATE_MACHINE__BEGIN(state);
 // Regular data mode.
@@ -28,6 +35,8 @@ STATE_MACHINE__BEGIN(state);
     if( packet->is_full() && (!expandPacketCapacity()) ) 
       return Status::Status__Busy;
     packet->append(data);
+
+    return Status::Status__Good;
   }
 
   STATE_MACHINE__CHECKPOINT_RETURN(state, true);
@@ -69,10 +78,13 @@ STATE_MACHINE__BEGIN(state);
 
   // Does the opcode indicate a complete packet?
   }else if(data == MEP::Opcode__CompletePacket){
+DEBUGprint("Packet completed. Size: %X\n", packet->get_size());
+//for(uint8_t i = packet->get_size(); i > 0; i --)
+//  DEBUGprint("Packet byte: %X\n", packet->get(i));
     // Sink completed packet
     packetSink->sinkPacket(packet);
     // Disassociate the packet (in preparation for the next packet)
-    packet = NULL;
+    discardPacket();
 
   // Does the opcode indicate a bad packet?
   }else if(data == MEP::Opcode__BadPacket){

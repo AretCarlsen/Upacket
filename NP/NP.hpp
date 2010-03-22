@@ -4,13 +4,15 @@
 #include "../../DataStore/Buffer.hpp"
 #include "../Bpacket/Bpacket.hpp"
 #include "../../Process/Process.hpp"
+#include "../MEP/MEP.hpp"
+#include "../MAP/MAP.hpp"
 
 namespace NP {
 
 // Encode a packet to an outgoing bytestream.
 //
 // Complete is indicated as newline.
-class NPEncoder : public Packet::BpacketSink, public Process {
+class NPEncoder : public MAP::MAPPacketSink, public Process {
 private:
 // NP-encoded outgoing data
   DataTransfer::DataSink<uint8_t, Status::Status_t> *dataSink;
@@ -73,8 +75,8 @@ public:
 class NPDecoder : public DataTransfer::DataSink<uint8_t, Status::Status_t> {
 private:
 
-  Packet::BpacketSink *packetSink;
-  Packet::Bpacket *packet;
+  MAP::MAPPacketSink *packetSink;
+  MAP::MAPPacket *packet;
 
 // Initial packet capacity, in bytes
   static const uint8_t PacketCapacity__Initial = 20;
@@ -84,24 +86,34 @@ private:
 public:
 
 // Constructor
-  NPDecoder(Packet::BpacketSink *new_packetSink)
+  NPDecoder(MAP::MAPPacketSink *new_packetSink)
   : packetSink(new_packetSink),
     packet(NULL)
   { }
 
-// Expand the current packet.
-  bool enlargePacketCapacity(){
-    assert(packet != NULL);
-
-    return packet->set_capacity(packet->get_capacity() + PacketCapacity__Increment);
+// Discard the current packet.
+  void discardPacket(){
+    Packet::dereferencePacket(packet);
+    packet = NULL;
   }
 
 // Accept NP-encoded data to be decoded.
   Status::Status_t sinkData(MEP::Data_t data){
+  // Start a new packet, if necessary.
+    if(packet == NULL){
+    // Attempt to allocate a new packet.
+      if(! allocateNewPacket())
+        return Status::Status__Busy;
+
+    }
+
     // Complete packet?
     if(data == '\n'){
-      packetSink->sinkPacket(packet);
-      packet = NULL;
+    // Don't bother with empty packets.
+      if(! packet->is_empty()){
+        packetSink->sinkPacket(packet);
+        discardPacket();
+      }
 
     // Discard packet?
     }else if(data == '!'){
@@ -109,27 +121,14 @@ public:
 
     // Regular data
     }else{
-  // Start a new packet, if necessary.
-      if(packet == NULL){
-    // Attempt to allocate a new packet.
-        if(! allocateNewPacket())
-          return Status::Status__Busy;
-
   // Enlarge the packet, if necessary
-      }else if( packet->is_full() && !(enlargePacketCapacity()) )
+      if( packet->is_full() && !(expandPacketCapacity()) )
         return Status::Status__Busy;
 
       packet->append(data);
-
     }
 
     return Status::Status__Good;
-  }
-
-// Discard the current packet.
-  void discardPacket(){
-    Packet::dereferencePacket(packet);
-    packet = NULL;
   }
 
 // Allocate a new packet.
@@ -147,9 +146,19 @@ public:
       return false;
     }
 
+DEBUGprint("allocateNewPacket: Allocated new packet.\n");
+
 // Save new packet.
     packet = newPacket;
+    Packet::referencePacket(packet);
     return true;
+  }
+
+// Expand the current packet.
+  bool expandPacketCapacity(){
+    assert(packet != NULL);
+
+    return packet->set_capacity(packet->get_capacity() + PacketCapacity__Increment);
   }
 
 };

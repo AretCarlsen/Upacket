@@ -9,9 +9,13 @@
 
 // Begin processing a new packet
 Status::Status_t MEP::MEPEncoder::sinkPacket(Packet::Bpacket *new_packet){
+DEBUGprint("MEPEncoder: Considering packet.\n");
+
   // Busy? Then refuse to accept.
   if(isBusy())
     return Status::Status__Busy;
+
+DEBUGprint("MEPEncoder: Accepting packet.\n");
 
   // Save packet for later calls to process().
   packet = new_packet;
@@ -43,7 +47,7 @@ STATE_MACHINE__BEGIN(state);
 STATE_MACHINE__CHECKPOINT(state);
 
     // Comparison is a little shifty...
-  while(packetData <= packet->back()){
+  while(packetData < packet->back()){
     // Consecutive or terminating bytes that collide with the MEP control byte need to be encoded.
     // Check for a byte matching the MEP control prefix (masked) directly following a byte that
     // exactly matches the MEP control character (prefix).

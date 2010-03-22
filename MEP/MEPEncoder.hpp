@@ -58,6 +58,7 @@ public:
 
 // Reset the encoder.
   void reset(){
+DEBUGprint("MEPEncoder: Resetting.\n");
     STATE_MACHINE__RESET(state);
     Packet::dereferencePacket(packet);
     packet = NULL;
