@@ -3,11 +3,6 @@
 #include "MEPDecoder.hpp"
 #include "../../StateMachine/StateMachine.hpp"
 
-#ifndef DEBUG
-#define DEBUG
-#include "../../Debug/Debug.hpp"
-#endif
-
 // If Busy is returned, then the Decoder was not able to allocate sufficient memory.
 // The caller may try again.
 Status::Status_t MEP::MEPDecoder::sinkData(MEP::Data_t data){
@@ -43,8 +38,6 @@ STATE_MACHINE__BEGIN(state);
 // Data matches control byte. Control mode.
 
 // Possible opcode received.
-
-  Status::Status_t tempStatus;
 
   // If the byte received immediately following a control byte does not
   // match the control prefix, then the sender actually intended to send
@@ -99,6 +92,6 @@ DEBUGprint("Packet completed. Size: %X\n", packet->get_size());
   reset();
   return Status::Status__Good;
 
-STATE_MACHINE__END(state);
+STATE_MACHINE__END(state); return Status::Status__Bad;
 }
 

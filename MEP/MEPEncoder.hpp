@@ -3,7 +3,6 @@
 #pragma once
 
 #include "MEP.hpp"
-#include "../Bpacket/Bpacket.hpp"
 #include "../MAP/MAP.hpp"
 #include "../../StateMachine/StateMachine.hpp"
 #include "../../DataTransfer/DataTransfer.hpp"
@@ -16,10 +15,10 @@
 namespace MEP {
 
 // Encode a packet to an outgoing bytestream.
-class MEPEncoder : public Packet::BpacketSink, public MAP::MAPPacketSink, public Process {
+class MEPEncoder : public MAP::MAPPacketSink {  // , public Process, public Packet::BpacketSink
 private:
 // Current packet
-  Packet::Bpacket *packet;
+  MAP::MAPPacket *packet;
 // Current packet data
   Packet::Data_t *packetData;
 
@@ -30,17 +29,13 @@ private:
 // MEP-encoded outgoing data
   DataTransfer::DataSink<MEP::Data_t, Status::Status_t> *outputSink;
 
-// Track if free at end is required.
-  bool isMAP;
-
 public:
 
 // Constructor
   MEPEncoder(DataTransfer::DataSink<MEP::Data_t, Status::Status_t> *new_outputSink)
-  : outputSink(new_outputSink),
-    packet(NULL),
+  : packet(NULL),
     controlCollisionInProgress(false),
-    isMAP(false)
+    outputSink(new_outputSink)
   {
     STATE_MACHINE__RESET(state);
   }
@@ -48,10 +43,7 @@ public:
 
 // Accept a packet to be encoded.
 // Non-blocking. May return Good, Busy, or Bad (rejected).
-  Status::Status_t sinkPacket(Packet::Bpacket *new_packet);
-  Status::Status_t sinkPacket(MAP::MAPPacket *new_packet){
-    sinkPacket((Packet::Bpacket*) new_packet);
-  }
+  Status::Status_t sinkPacket(MAP::MAPPacket *new_packet);
 
 // Continue encoding the packet.
   Status::Status_t process();
@@ -60,8 +52,10 @@ public:
   void reset(){
 DEBUGprint("MEPEncoder: Resetting.\n");
     STATE_MACHINE__RESET(state);
-    Packet::dereferencePacket(packet);
-    packet = NULL;
+    if(packet != NULL){
+      MAP::dereferencePacket(packet);
+      packet = NULL;
+    }
     controlCollisionInProgress = false;
   }
 

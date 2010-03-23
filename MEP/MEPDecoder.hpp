@@ -5,7 +5,6 @@
 #pragma once
 
 #include "MEP.hpp"
-#include "../Bpacket/Bpacket.hpp"
 #include "../../DataTransfer/DataSink.hpp"
 #include "../../StateMachine/StateMachine.hpp"
 #include "../MAP/MAP.hpp"
@@ -31,8 +30,8 @@ public:
 
 // Constructor
   MEPDecoder(MAP::MAPPacketSink *new_packetSink)
-  : packet(NULL),
-    packetSink(new_packetSink)
+  : packetSink(new_packetSink),
+    packet(NULL)
   {
     reset();
   }
@@ -47,7 +46,7 @@ public:
 
 // Discard the current packet.
   void discardPacket(){
-    Packet::dereferencePacket(packet);
+    MAP::dereferencePacket(packet);
     packet = NULL;
   }
 
@@ -70,7 +69,7 @@ DEBUGprint("allocateNewPacket: Allocated new packet.\n");
 
 // Save new packet.
     packet = newPacket;
-    Packet::referencePacket(packet);
+    MAP::referencePacket(packet);
 
     return true;
   }

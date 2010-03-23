@@ -2,13 +2,8 @@
 
 #include "MEPEncoder.hpp"
 
-// Debug
-#include <stdio.h>
-
-#include "../globals.hpp"
-
 // Begin processing a new packet
-Status::Status_t MEP::MEPEncoder::sinkPacket(Packet::Bpacket *new_packet){
+Status::Status_t MEP::MEPEncoder::sinkPacket(MAP::MAPPacket *new_packet){
 DEBUGprint("MEPEncoder: Considering packet.\n");
 
   // Busy? Then refuse to accept.
@@ -22,7 +17,7 @@ DEBUGprint("MEPEncoder: Accepting packet.\n");
 
   // Set packet status.
   packet->sinkStatus(Status::Status__Busy);
-  Packet::referencePacket(packet);
+  MAP::referencePacket(packet);
 
   // Packet has been accepted.
   return Status::Status__Good;
@@ -109,6 +104,6 @@ STATE_MACHINE__CHECKPOINT(state);
   // All done for now.
   return Status::Status__Good;
 
-STATE_MACHINE__END(state);
+STATE_MACHINE__END(state); return Status::Status__Bad;
 }
 

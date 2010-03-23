@@ -3,18 +3,6 @@
 #include "C78.hpp"
 #include "C78Decoder.hpp"
 
-#undef DEBUGprint
-#undef DEBUG
-//#define DEBUG
-
-// Debugging
-#ifdef DEBUG
-#include <stdio.h>
-#define DEBUGprint(args) (fprintf(stderr, "DEBUG SSPPDecoder.cpp: "), fprintf args)
-#else
-#define DEBUGprint(args)
-#endif
-
 
 bool C78Decoder::sinkData(uint8_t data){
 // Check for MSB data.

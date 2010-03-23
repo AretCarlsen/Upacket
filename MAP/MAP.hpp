@@ -130,14 +130,40 @@ namespace MAP {
 // The first byte of the packet contents are taken as a MAP header.
 // Depending on the header byte, the following bytes may be dest and/or src addresses,
 // and the packet contents may be suffixed with a CRC32 checksum.
-class MAPPacket : public Packet::Bpacket {
+//class MAPPacket : public Packet::Bpacket {
+// A packet of buffered (randomly accessible) data and an associated status.
+// Limited to a 2^16-1 byte count.
+#define PACKET_CAPACITY_T uint16_t
+class MAPPacket : public DataStore::DynamicArrayBuffer<Data_t, PACKET_CAPACITY_T> {
+  // Current status
+  Status::Status_t status;
+
+  // Reference count (for garbage collection)
+  uint8_t referenceCount;
+
+public:
+  typedef PACKET_CAPACITY_T Capacity_t;
+
+  void sinkStatus(Status::Status_t new_status){
+    status = new_status;
+  }
+
+  uint8_t incrementReferenceCount(){
+    return ++referenceCount;
+  }
+  uint8_t decrementReferenceCount(){
+    return --referenceCount;
+  }
+
 private:
   Capacity_t dataOffset;
 
 public:
 
   MAPPacket()
-  : dataOffset(0)
+  : status(Status::Status__Complete),
+    referenceCount(0),
+    dataOffset(0)
   { }
 
   Data_t get_headerByte(){
@@ -259,7 +285,7 @@ DEBUGprint("Data offset: %u. Data size: %u. Checksum present: %u\n", dataOffset,
   bool get_destAddressPresent(){
     return MAP::get_destAddressPresent(get_headerByte());
   }
-  bool set_destAddressPresent(bool new_value){
+  void set_destAddressPresent(bool new_value){
     set_headerByte(MAP::set_destAddressPresent(get_headerByte(), new_value));
   }
 
@@ -267,7 +293,7 @@ DEBUGprint("Data offset: %u. Data size: %u. Checksum present: %u\n", dataOffset,
   bool get_srcAddressPresent(){
     return MAP::get_srcAddressPresent(get_headerByte());
   }
-  bool set_srcAddressPresent(bool new_value){
+  void set_srcAddressPresent(bool new_value){
     set_headerByte(MAP::set_srcAddressPresent(get_headerByte(), new_value));
   }
 
@@ -279,6 +305,19 @@ DEBUGprint("Data offset: %u. Data size: %u. Checksum present: %u\n", dataOffset,
     set_headerByte(MAP::set_addressType(get_headerByte(), new_value));
   }
 };
+
+// Reference a packet.
+inline void referencePacket(MAPPacket *packet){
+// Returns the new reference count
+  packet->incrementReferenceCount();
+}
+// Dereference a packet, and free the packet
+// if it is no longer referenced by anyone.
+inline void dereferencePacket(MAPPacket *packet){
+// Returns the new reference count
+  if(packet->decrementReferenceCount() == 0)
+    delete packet;
+}
 
 class MAPPacketSink {
 public:

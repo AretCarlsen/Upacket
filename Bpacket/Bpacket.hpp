@@ -28,7 +28,7 @@ public:
 
   typedef BPACKET_CAPACITY_T Capacity_t;
 
-  virtual Status::Status_t sinkStatus(Status::Status_t new_status){
+  void sinkStatus(Status::Status_t new_status){
     status = new_status;
   }
 

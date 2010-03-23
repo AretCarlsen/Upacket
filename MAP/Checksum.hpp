@@ -24,13 +24,14 @@ namespace MAP {
 typedef uint32_t Checksum_t;
 // Initial checksum value (inverted 0)
 static const Checksum_t ChecksumInitialValue = 0xFFFFFFFF;
-// Checksum table is indexable by any single byte. Its size, therefore, is 2^8.
-extern const uint32_t ChecksumTable[256];
+
+// Get the ith precalculated checksum table entry.
+uint32_t getChecksumTableEntry(uint8_t i);
 
 // Checksum generation engine.
 // Currently a simple one-liner, as is based on 1kB source table.
 inline Checksum_t checksumEngine(Checksum_t old_value, uint8_t new_data){
-  return ChecksumTable[(uint8_t) old_value ^ new_data] ^ (old_value >> 8);
+  return getChecksumTableEntry((uint8_t) old_value ^ new_data) ^ (old_value >> 8);
 }
 
 // Returns true if the packet already contained a checksum or a checksum has been successfully appended.

@@ -68,7 +68,7 @@ public:
 // Signal/slot style broadcasting.
   Status::Status_t sinkPacket(MAP::MAPPacket *packet){
   // Note packet in use.
-    Packet::referencePacket(packet);
+    MAP::referencePacket(packet);
 
   // Does not stop after an acceptance.
     for(MAPPacketSink **packetSink = sinks.front(); packetSink < sinks.back(); packetSink++){
@@ -77,13 +77,13 @@ packet->get_checksumPresent();
     }
 
   // Free packet.
-    Packet::dereferencePacket(packet);
+    MAP::dereferencePacket(packet);
 
     return Status::Status__Good;
   }
 };
 
-class SimpleServerProcess : public MAP::MAPPacketSink, public Process {
+class SimpleServerProcess : public MAP::MAPPacketSink {  // public Process
 protected:
   MAP::MAPPacket *packet;
 
@@ -99,14 +99,14 @@ public:
 
     packet = new_packet;
 // Note packet in use.
-    Packet::referencePacket(packet);
+    MAP::referencePacket(packet);
 
     return Status::Status__Good;
   }
 
-  void freePacket(){
+  void finishedWithPacket(){
     packet->sinkStatus(Status::Status__Complete);
-    Packet::dereferencePacket(packet);
+    MAP::dereferencePacket(packet);
     packet = NULL;
   }
 };
