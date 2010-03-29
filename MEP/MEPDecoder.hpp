@@ -13,7 +13,7 @@
 namespace MEP {
 
 // Decode packets from an encoded byte stream.
-class MEPDecoder : public DataTransfer::DataSink<uint8_t, Status::Status_t> {
+class MEPDecoder { //: public DataTransfer::DataSink<uint8_t, Status::Status_t> {
 private:
 // State machine
   StateMachine state;
@@ -52,23 +52,11 @@ public:
 
 // Allocate a new packet.
   bool allocateNewPacket(){
-// Attempt to allocate initial packet
-    MAP::MAPPacket *newPacket = new MAP::MAPPacket;
-
-// Allocation failed? Return false.
-    if(newPacket == NULL)
+  // Attempt to allocate
+    if(! MAP::allocateNewPacket(&packet, PacketCapacity__Initial))
       return false;
 
-// Attempt to allocate buffer storage
-    if(! newPacket->set_capacity(PacketCapacity__Initial)){
-      delete newPacket;
-      return false;
-    }
-
-DEBUGprint("allocateNewPacket: Allocated new packet.\n");
-
-// Save new packet.
-    packet = newPacket;
+  // Reference packet
     MAP::referencePacket(packet);
 
     return true;

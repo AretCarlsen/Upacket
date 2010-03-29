@@ -15,7 +15,7 @@
 namespace MEP {
 
 // Encode a packet to an outgoing bytestream.
-class MEPEncoder : public MAP::MAPPacketSink {  // , public Process, public Packet::BpacketSink
+class MEPEncoder : public MAP::MAPPacketSink, public Process {
 private:
 // Current packet
   MAP::MAPPacket *packet;
@@ -27,12 +27,14 @@ private:
   bool controlCollisionInProgress;
 
 // MEP-encoded outgoing data
-  DataTransfer::DataSink<MEP::Data_t, Status::Status_t> *outputSink;
+//  DataTransfer::DataSink<MEP::Data_t, Status::Status_t> *outputSink;
+  DataStore::RingBuffer<MEP::Data_t, Status::Status_t> *outputSink;
 
 public:
 
 // Constructor
-  MEPEncoder(DataTransfer::DataSink<MEP::Data_t, Status::Status_t> *new_outputSink)
+  //MEPEncoder(DataTransfer::DataSink<MEP::Data_t, Status::Status_t> *new_outputSink)
+  MEPEncoder(DataStore::RingBuffer<MEP::Data_t, Status::Status_t> *new_outputSink)
   : packet(NULL),
     controlCollisionInProgress(false),
     outputSink(new_outputSink)

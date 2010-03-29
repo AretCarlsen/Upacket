@@ -1,15 +1,21 @@
+// Micro Address Protocol declarations and definitions
 //
-// Micro Address Protocol common definitions
+// Includes protocol-related definitions, header byte manipulation functions,
+// MAPPacket class, MAPPacketSink class
 //
 
 #pragma once
 
 #include "../Bpacket/Bpacket.hpp"
 #include "../Code78/Code78.hpp"
+#include "../../Process/Process.hpp"
+#include "../../DataStore/RingBuffer.hpp"
 
 namespace MAP {
 // Data type
   typedef uint8_t Data_t;
+
+/* PROTOCOL DEFINITIONS */
 
 // Bit positions and masks for the MAP header
   typedef uint8_t MaskType_t;
@@ -69,9 +75,14 @@ namespace MAP {
 // DNS addresses. Lengthy, globally unique textual address; ascii text in a
 // dot-delimited little-endian hierarchy.
   static const AddressType_t AddressType__DNS = 7;
+// Topics. (Aka multicast.)
+  static const AddressType_t AddressType__Topic = 8;
 // Address types above 14 are given in C78-encoded format
 // beginning with the byte immediately following the header byte.
   static const AddressType_t AddressType__extended = 15;
+
+
+/* HEADER BYTE MANIPULATION */
 
 // Set a set of header bits to true/false.
   inline void setHeaderMask(Data_t &header, uint8_t bit_mask, bool new_value){
@@ -81,14 +92,7 @@ namespace MAP {
       header &= ~bit_mask;
   }
 
-  inline bool get_nextProtoPresent(Data_t header){
-    return (header & NextProtoPresent_Mask);
-  }
-  inline Data_t set_nextProtoPresent(Data_t header, bool new_value){
-    setHeaderMask(header, NextProtoPresent_Mask, new_value);
-    return header;
-  }
-
+// Check/configure checksum-present bit flag in header
   inline bool get_checksumPresent(Data_t header){
     return (header & ChecksumPresent_Mask);
   }
@@ -97,14 +101,16 @@ namespace MAP {
     return header;
   }
 
-  inline bool get_srcAddressPresent(Data_t header){
-    return (header & SrcAddressPresent_Mask);
+// Check/configure next-proto-present bit flag in header
+  inline bool get_nextProtoPresent(Data_t header){
+    return (header & NextProtoPresent_Mask);
   }
-  inline Data_t set_srcAddressPresent(Data_t header, bool new_value){
-    setHeaderMask(header, SrcAddressPresent_Mask, new_value);
+  inline Data_t set_nextProtoPresent(Data_t header, bool new_value){
+    setHeaderMask(header, NextProtoPresent_Mask, new_value);
     return header;
   }
 
+// Check/configure dest-address-present bit flag in header
   inline bool get_destAddressPresent(Data_t header){
     return (header & DestAddressPresent_Mask);
   }
@@ -113,10 +119,21 @@ namespace MAP {
     return header;
   }
 
+// Check/configure src-address-present bit flag in header
+  inline bool get_srcAddressPresent(Data_t header){
+    return (header & SrcAddressPresent_Mask);
+  }
+  inline Data_t set_srcAddressPresent(Data_t header, bool new_value){
+    setHeaderMask(header, SrcAddressPresent_Mask, new_value);
+    return header;
+  }
+
+// Check/configure addressType (in header)
   inline AddressType_t get_addressType(Data_t header){
     return (header & AddressType_Mask);
   }
   inline Data_t set_addressType(Data_t header, AddressType_t new_value){
+// Can't handle expanded Types
     assert(new_value < 15);
   // Erase current Type
     header &= ~AddressType_Mask;
@@ -126,203 +143,97 @@ namespace MAP {
     return header;
   }
 
-// A MAP packet.
-// The first byte of the packet contents are taken as a MAP header.
-// Depending on the header byte, the following bytes may be dest and/or src addresses,
-// and the packet contents may be suffixed with a CRC32 checksum.
-//class MAPPacket : public Packet::Bpacket {
-// A packet of buffered (randomly accessible) data and an associated status.
-// Limited to a 2^16-1 byte count.
-#define PACKET_CAPACITY_T uint16_t
-class MAPPacket : public DataStore::DynamicArrayBuffer<Data_t, PACKET_CAPACITY_T> {
-  // Current status
-  Status::Status_t status;
 
-  // Reference count (for garbage collection)
-  uint8_t referenceCount;
+/* CHECKSUMS */
 
-public:
-  typedef PACKET_CAPACITY_T Capacity_t;
-
-  void sinkStatus(Status::Status_t new_status){
-    status = new_status;
-  }
-
-  uint8_t incrementReferenceCount(){
-    return ++referenceCount;
-  }
-  uint8_t decrementReferenceCount(){
-    return --referenceCount;
-  }
-
-private:
-  Capacity_t dataOffset;
-
-public:
-
-  MAPPacket()
-  : status(Status::Status__Complete),
-    referenceCount(0),
-    dataOffset(0)
-  { }
-
-  Data_t get_headerByte(){
-    return get(0);
-  }
-  void set_headerByte(Data_t new_value){
-    set(0, new_value);
-  }
-
-  Data_t* get_data(){
-    if(dataOffset == 0)
-      calcDataOffset();
-
-    return front() + dataOffset;
-  }
-  Data_t get_data(Capacity_t index){
-    if(dataOffset == 0)
-      calcDataOffset();
-
-    return get(dataOffset + index);
-  }
-  void set_data(Capacity_t index, Data_t new_value){
-    if(dataOffset == 0)
-      calcDataOffset();
-
-    set(dataOffset + index, new_value);
-  }
-// Get the data area size
-  Capacity_t get_data_size(){
-    if(dataOffset == 0)
-      calcDataOffset();
-
-    Capacity_t data_size = size;
-
-    if(data_size <= dataOffset)
-      return 0;
-
-    data_size -= dataOffset;
-
-    if(get_checksumPresent()){
-      if(data_size <= 4)
-        return 0;
-
-      data_size -= 4;
-    }
-
-DEBUGprint("Data offset: %u. Data size: %u. Checksum present: %u\n", dataOffset, data_size, get_checksumPresent());
-
-    return data_size;
-  }
-
-  void calcDataOffset(){
-    // Begin just after header byte.
-    uint8_t *byte = front() + 1;
-
-    // Step past dest address, if present.
-    if(get_destAddressPresent()){
-      while(! Code78::isLastByte(*byte))
-        byte++;
-      byte++;
-    }
-
-    // Step past src address, if present.
-    if(get_srcAddressPresent()){
-      while(! Code78::isLastByte(*byte))
-        byte++;
-      byte++;
-    }
-
-    if(get_nextProtoPresent()){
-      while(! Code78::isLastByte(*byte))
-        byte++;
-      byte++;
-    }
-
-  // Data offset is difference between current position (at first byte of data)
-  // and header byte position.
-    dataOffset = byte - front();
-  }
-
-  Data_t* get_destAddress(){
-    assert(get_destAddressPresent());
-
-    if(get_size() < 2)
-      return NULL;
-
-    return front() + 1;
-  }
-  Data_t* get_srcAddress(){
-    assert(get_destAddressPresent());
-
-    Data_t *data_ptr = get_destAddress();
-    while(! Code78::isLastByte(*data_ptr))
-      data_ptr++;
-    data_ptr++;
-    if(data_ptr >= back())
-      return NULL;
-
-    return data_ptr;
-  }
-
-// Checksum presence
-  bool get_checksumPresent(){
-    return MAP::get_checksumPresent(get_headerByte());
-  }
-  void set_checksumPresent(bool new_value){
-    set_headerByte(MAP::set_checksumPresent(get_headerByte(), new_value));
-  }
-
-// Next-protocol presence
-  bool get_nextProtoPresent(){
-    return MAP::get_nextProtoPresent(get_headerByte());
-  }
-  void set_nextProtoPresent(bool new_value){
-    set_headerByte(MAP::set_nextProtoPresent(get_headerByte(), new_value));
-  }
-
-// Destination address presence
-  bool get_destAddressPresent(){
-    return MAP::get_destAddressPresent(get_headerByte());
-  }
-  void set_destAddressPresent(bool new_value){
-    set_headerByte(MAP::set_destAddressPresent(get_headerByte(), new_value));
-  }
-
-// Source address presence
-  bool get_srcAddressPresent(){
-    return MAP::get_srcAddressPresent(get_headerByte());
-  }
-  void set_srcAddressPresent(bool new_value){
-    set_headerByte(MAP::set_srcAddressPresent(get_headerByte(), new_value));
-  }
-
-// Address type
-  AddressType_t get_addressType(){
-    return MAP::get_addressType(get_headerByte());
-  }
-  void set_addressType(AddressType_t new_value){
-    set_headerByte(MAP::set_addressType(get_headerByte(), new_value));
-  }
+// Checksum type: 32-bit (Posix)
+  typedef uint32_t Checksum_t;
 };
+
+// MAPPacket class
+#include "MAPPacket.hpp"
+
+namespace MAP {
 
 // Reference a packet.
 inline void referencePacket(MAPPacket *packet){
-// Returns the new reference count
   packet->incrementReferenceCount();
 }
 // Dereference a packet, and free the packet
 // if it is no longer referenced by anyone.
 inline void dereferencePacket(MAPPacket *packet){
-// Returns the new reference count
   if(packet->decrementReferenceCount() == 0)
+  // Packet frees its own Buffers.
     delete packet;
 }
 
-class MAPPacketSink {
+}
+
+// MAPPacketSink class
+#include "MAPPacketSink.hpp"
+
+namespace MAP {
+
+// Allocate a new packet.
+bool allocateNewPacket(MAPPacket **packet, uint16_t capacity);
+
+// PacketChecksumGenerator: inline MAPPacketSink.
+// Appends checksums to packets as necessary.
+// Returns Good if checksum already present or was appended, in which
+// case packet has already been passed to the configured Sink.
+class PacketChecksumGenerator : public MAP::MAPPacketSink {
+// Next sink, to which the packet is relayed if a checksum is already prsent
+// or successfully appended.
+  MAP::MAPPacketSink *nextSink;
+
 public:
-  virtual Status::Status_t sinkPacket(MAPPacket *packet) = 0;
+
+  PacketChecksumGenerator(MAP::MAPPacketSink *new_nextSink)
+  : nextSink(new_nextSink)
+  { }
+
+// Generate a checksum for a packet.
+  Status::Status_t sinkPacket(MAPPacket *packet){
+    assert(nextSink != NULL);
+    assert(packet != NULL);
+
+// Generate checksum and append, if necessary
+    if(packet->appendChecksum())
+      return nextSink->sinkPacket(packet);
+  // Checksum generation can fail if add'l memory cannot be allocated, for instance.
+    else
+      return Status::Status__Bad;
+  }
 };
+
+// PacketValidator: inline MAPPacketSink.
+// Validates packets, including checksums and MAP headers.
+class PacketValidator : public MAP::MAPPacketSink {
+// Next sink, to which the packet is relayed if valid.
+  MAP::MAPPacketSink *nextSink;
+
+public:
+
+  PacketValidator(MAP::MAPPacketSink *new_nextSink)
+  : nextSink(new_nextSink)
+  { }
+
+// Validate a packet.
+  Status::Status_t sinkPacket(MAP::MAPPacket *packet){
+    assert(nextSink != NULL);
+    assert(packet != NULL);
+
+  // Validate checksum
+    if(packet->validate()){
+      DEBUGprint("PacketValidator: Packet valid.\n");
+      return nextSink->sinkPacket(packet);
+    }else{
+      DEBUGprint("PacketValidator: Packet invalid.\n");
+      return Status::Status__Bad;
+    }
+  }
+};
+
 
 // End namespace: MAP
 };
