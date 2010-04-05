@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include "../../DataTransfer/DataSource.hpp"
+#include "../../DataTransfer/DataTransfer.hpp"
 // Status codes
 #include "../../Status/Status.hpp"
 
@@ -33,7 +33,7 @@ namespace MEP {
 // Data
   typedef uint8_t Data_t;
 
-  inline bool isControlByte(uint8_t byte){
+  inline bool isControlByte(const uint8_t &byte){
     return (byte == DefaultControlPrefix);
   }
 }

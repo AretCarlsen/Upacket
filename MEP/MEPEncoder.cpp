@@ -48,11 +48,11 @@ STATE_MACHINE__CHECKPOINT(state);
     // exactly matches the MEP control character (prefix).
     if(
          controlCollisionInProgress
-      && ( (*packetData & MEP::PrefixMask) == MEP::DefaultControlPrefix )
+      && ( (*packetData & MEP::PrefixMask) == controlPrefix )
     ){
       // Send the control sequence that encodes the control prefix as a data byte.
         // Check for outgoing buffer overflow, as indicated by a return value other than 0.
-      if(outputSink->sinkData(MEP::DefaultControlPrefix | MEP::Opcode__SendControlPrefixAsData) != Status::Status__Good)
+      if(outputSink->sinkData(controlPrefix | MEP::Opcode__SendControlPrefixAsData) != Status::Status__Good)
         return Status::Status__Good;
 
       controlCollisionInProgress = false;
@@ -64,7 +64,7 @@ STATE_MACHINE__CHECKPOINT(state);
       return Status::Status__Good;
       
     // Check for control prefix collision
-    controlCollisionInProgress = (*packetData == MEP::DefaultControlPrefix);
+    controlCollisionInProgress = (*packetData == controlPrefix);
 
     packetData++;
   }
@@ -75,7 +75,7 @@ STATE_MACHINE__CHECKPOINT(state);
   // Resolve any pending control collision.
   if(controlCollisionInProgress){
     // Attempt sink
-    if(outputSink->sinkData(MEP::DefaultControlPrefix) != Status::Status__Good)
+    if(outputSink->sinkData(controlPrefix) != Status::Status__Good)
       return Status::Status__Good;
 
     controlCollisionInProgress = false;
@@ -85,14 +85,14 @@ STATE_MACHINE__CHECKPOINT(state);
 STATE_MACHINE__CHECKPOINT(state);
 
   // Sink control prefix
-  if(outputSink->sinkData(MEP::DefaultControlPrefix) != Status::Status__Good)
+  if(outputSink->sinkData(controlPrefix) != Status::Status__Good)
     return Status::Status__Good;
 
 // Checkpoint: Control byte sent, preparing to send end packet
 STATE_MACHINE__CHECKPOINT(state);
 
   // Attempt to send end packet
-  if(outputSink->sinkData(MEP::DefaultControlPrefix | MEP::Opcode__CompletePacket) != Status::Status__Good)
+  if(outputSink->sinkData(controlPrefix | MEP::Opcode__CompletePacket) != Status::Status__Good)
     return Status::Status__Good;
 
   // Indicate packet processing is complete.

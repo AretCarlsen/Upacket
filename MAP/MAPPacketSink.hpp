@@ -18,7 +18,7 @@ public:
     packetSink(new_packetSink)
   { }
 
-  Status::Status_t sinkPacket(MAPPacket* packet){
+  Status::Status_t sinkPacket(MAPPacket* const packet){
   // If the packet buffer is empty, try to sink the packet immediately.
     if(packetBuffer.is_empty()){
     // Try to sink the packet

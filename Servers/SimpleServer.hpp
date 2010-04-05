@@ -16,7 +16,7 @@ public:
   : packet(NULL)
   { }
 
-  Status::Status_t sinkPacket(MAP::MAPPacket *new_packet){
+  Status::Status_t sinkPacket(MAP::MAPPacket* const new_packet){
     if(packet != NULL)
       return Status::Status__Bad;
 
@@ -27,10 +27,17 @@ public:
     return Status::Status__Good;
   }
 
-  void finishedWithPacket(){
+  Status::Status_t finishedWithPacket(MAP::MAPPacket* const secondPacket){
+    MAP::dereferencePacket(secondPacket);
+    return finishedWithPacket();
+  }
+
+  Status::Status_t finishedWithPacket(){
     packet->sinkStatus(Status::Status__Complete);
     MAP::dereferencePacket(packet);
     packet = NULL;
+
+    return Status::Status__Good;
   }
 
   bool prepareReply(MAP::MAPPacket **replyPacket, MAP::MAPPacket *packet, uint16_t data_capacity);

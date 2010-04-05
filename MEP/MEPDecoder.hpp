@@ -5,7 +5,7 @@
 #pragma once
 
 #include "MEP.hpp"
-#include "../../DataTransfer/DataSink.hpp"
+#include "../../DataTransfer/DataTransfer.hpp"
 #include "../../StateMachine/StateMachine.hpp"
 #include "../MAP/MAP.hpp"
 
@@ -15,6 +15,9 @@ namespace MEP {
 // Decode packets from an encoded byte stream.
 class MEPDecoder { //: public DataTransfer::DataSink<uint8_t, Status::Status_t> {
 private:
+// Control prefix
+  MAP::Data_t controlPrefix;
+
 // State machine
   StateMachine state;
 
@@ -25,19 +28,22 @@ private:
   static const uint8_t PacketCapacity__Initial = 20;
 // Packet resizing increment, in bytes
   static const uint8_t PacketCapacity__Increment = 10;
+// Max allowed packet size, in bytes
+  static const uint8_t PacketCapacity__Max = 100;
 
 public:
 
 // Constructor
-  MEPDecoder(MAP::MAPPacketSink *new_packetSink)
-  : packetSink(new_packetSink),
+  MEPDecoder(MAP::MAPPacketSink *new_packetSink, MAP::Data_t new_controlPrefix = MEP::DefaultControlPrefix)
+  : controlPrefix(new_controlPrefix),
+    packetSink(new_packetSink),
     packet(NULL)
   {
     reset();
   }
 
 // Accept MEP-encoded data to be decoded.
-  Status::Status_t sinkData(MEP::Data_t data);
+  Status::Status_t sinkData(const MEP::Data_t &data);
 
 // Reset decoder.
   void reset(){

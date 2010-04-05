@@ -7,6 +7,5 @@ namespace PosixCRC32Checksum {
 
 // Get the ith precalculated checksum table entry.
   uint32_t getChecksumTableEntry(uint8_t i);
-
 }
 

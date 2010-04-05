@@ -21,6 +21,50 @@ bool MAP::MAPPacket::sinkExpand(Data_t data, uint8_t capacity_increment, uint8_t
   return true;
 }
 
+// Sink a numeric value in C78-encoded big-endian format.
+bool MAP::MAPPacket::sinkC78(const uint32_t value, const uint8_t capacity_increment, const uint8_t capacity_limit){
+  // Calculate extra C78 bytes required (before concluding byte, with its 0 MSb).
+  // Will need an extra byte for each log (base 2^7) increment.
+  uint8_t extraBytes = 0;
+  for(uint32_t tmpValue = value >> 7; tmpValue > 0; tmpValue >>= 7)
+    extraBytes++;
+
+  // For each extra byte, sink the corresponding highest 7 bits.
+  for(; extraBytes > 0; extraBytes--){
+    if(! sinkExpand((value >> (7 * extraBytes)) | 0x80, capacity_increment, capacity_limit)) return false;
+  }
+  // Sink last posByte
+  return sinkExpand(value & 0x7F, capacity_increment, capacity_limit);
+}
+
+// Source a C78-encoded big-endian numeric value.
+  // Note that the data_ptr is left pointing at the last C78 byte, if valid.
+bool MAP::MAPPacket::sourceC78(uint32_t &value, Data_t*& data_ptr){
+// Sanity check on data.
+  if(data_ptr == NULL || data_ptr >= back())
+    return false;
+
+// Initial value for numerics.
+  value = 0;
+  while(data_ptr < back()){
+    value |= *data_ptr & 0x7F;
+  // Check if C78 value has concluded.
+    if(!(*data_ptr & 0x80)){
+      DEBUGprint("sourceC78: terminal byte\n");
+      break;
+    }
+
+    DEBUGprint("sourceC78: non-terminal byte\n");
+  // Left-shift in preparation for next byte.
+    value <<= 7;
+  // Next byte.
+    data_ptr++;
+  }
+
+// Check whether C78 value concluded properly.
+  return (data_ptr < back());
+}
+
 // Validate a MAP packet.
 //
 // If the require_checksum argument is true, then the packet must contain a (valid) checksum
@@ -82,7 +126,7 @@ bool MAP::MAPPacket::validate(bool require_checksum, bool remove_checksums){
 // Validate a checksum from the header at data_ptr to the end of the checksum
 // just before stop_ptr. (Obviously the checksum will not be valid if there are
 // less than four bytes between data_ptr (the header) and stop_ptr.)
-bool MAP::MAPPacket::validateChecksum(Data_t *data_ptr, Data_t *stop_ptr){
+bool MAP::MAPPacket::validateChecksum(const Data_t* data_ptr, const Data_t* stop_ptr){
   // Checksum calculation engine.
   PosixCRC32ChecksumEngine checksumEngine;
 

@@ -85,7 +85,7 @@ namespace MAP {
 /* HEADER BYTE MANIPULATION */
 
 // Set a set of header bits to true/false.
-  inline void setHeaderMask(Data_t &header, uint8_t bit_mask, bool new_value){
+  inline void setHeaderMask(Data_t &header, const uint8_t &bit_mask, const bool &new_value){
     if(new_value)
       header |= bit_mask;
     else
@@ -93,46 +93,46 @@ namespace MAP {
   }
 
 // Check/configure checksum-present bit flag in header
-  inline bool get_checksumPresent(Data_t header){
+  inline bool get_checksumPresent(const Data_t &header){
     return (header & ChecksumPresent_Mask);
   }
-  inline Data_t set_checksumPresent(Data_t header, bool new_value){
+  inline Data_t set_checksumPresent(Data_t header, const bool &new_value){
     setHeaderMask(header, ChecksumPresent_Mask, new_value);
     return header;
   }
 
 // Check/configure next-proto-present bit flag in header
-  inline bool get_nextProtoPresent(Data_t header){
+  inline bool get_nextProtoPresent(const Data_t &header){
     return (header & NextProtoPresent_Mask);
   }
-  inline Data_t set_nextProtoPresent(Data_t header, bool new_value){
+  inline Data_t set_nextProtoPresent(Data_t header, const bool &new_value){
     setHeaderMask(header, NextProtoPresent_Mask, new_value);
     return header;
   }
 
 // Check/configure dest-address-present bit flag in header
-  inline bool get_destAddressPresent(Data_t header){
+  inline bool get_destAddressPresent(const Data_t &header){
     return (header & DestAddressPresent_Mask);
   }
-  inline Data_t set_destAddressPresent(Data_t header, bool new_value){
+  inline Data_t set_destAddressPresent(Data_t header, const bool &new_value){
     setHeaderMask(header, DestAddressPresent_Mask, new_value);
     return header;
   }
 
 // Check/configure src-address-present bit flag in header
-  inline bool get_srcAddressPresent(Data_t header){
+  inline bool get_srcAddressPresent(const Data_t &header){
     return (header & SrcAddressPresent_Mask);
   }
-  inline Data_t set_srcAddressPresent(Data_t header, bool new_value){
+  inline Data_t set_srcAddressPresent(Data_t header, const bool &new_value){
     setHeaderMask(header, SrcAddressPresent_Mask, new_value);
     return header;
   }
 
 // Check/configure addressType (in header)
-  inline AddressType_t get_addressType(Data_t header){
+  inline AddressType_t get_addressType(const Data_t &header){
     return (header & AddressType_Mask);
   }
-  inline Data_t set_addressType(Data_t header, AddressType_t new_value){
+  inline Data_t set_addressType(Data_t header, const AddressType_t &new_value){
 // Can't handle expanded Types
     assert(new_value < 15);
   // Erase current Type
@@ -175,7 +175,7 @@ inline void dereferencePacket(MAPPacket *packet){
 namespace MAP {
 
 // Allocate a new packet.
-bool allocateNewPacket(MAPPacket **packet, uint16_t capacity);
+bool allocateNewPacket(MAPPacket** const packet, const uint16_t &capacity);
 
 // PacketChecksumGenerator: inline MAPPacketSink.
 // Appends checksums to packets as necessary.
@@ -193,7 +193,7 @@ public:
   { }
 
 // Generate a checksum for a packet.
-  Status::Status_t sinkPacket(MAPPacket *packet){
+  Status::Status_t sinkPacket(MAPPacket* packet){
     assert(nextSink != NULL);
     assert(packet != NULL);
 

@@ -31,14 +31,14 @@ public:
   { }
 
 // Set the current packet status
-  void sinkStatus(Status::Status_t new_status){
+  void sinkStatus(const Status::Status_t &new_status){
     status = new_status;
   }
 
   static const Capacity_t DefaultCapacityLimit = 50;
 
 // Append a data byte to a packet, expanding the packet's capacity if necessary.
-  bool sinkExpand(Data_t data, uint8_t capacity_increment = 1, uint8_t capacity_limit = DefaultCapacityLimit);
+  bool sinkExpand(Data_t data, const uint8_t capacity_increment = 1, const uint8_t capacity_limit = DefaultCapacityLimit);
 
   uint8_t incrementReferenceCount(){
     return ++referenceCount;
@@ -50,7 +50,7 @@ public:
       return --referenceCount;
   }
 
-  Data_t* get_first_header(){
+  Data_t* get_first_header() const{
     return front();
   }
 
@@ -62,7 +62,7 @@ public:
 */
 
 // Bypass a C78 field
-  Data_t* c78Pass(Data_t* data_ptr){
+  Data_t* c78Pass(Data_t* data_ptr) const{
   // Sanity checks
     if(data_ptr == NULL || data_ptr >= back())
       return NULL;
@@ -85,7 +85,7 @@ public:
 
 // Bypass the next-proto field, if present.
 // Returns NULL if it cannot return a valid address.
-  Data_t* bypass_nextProto(Data_t* header, Data_t* data_ptr){
+  Data_t* bypass_nextProto(const Data_t* const header, Data_t* data_ptr) const{
     // Step past src address, if present.
     if(MAP::get_nextProtoPresent(*header))
       return c78Pass(data_ptr);
@@ -94,7 +94,7 @@ public:
   }
 // Bypass the dest address field, if present.
 // Returns NULL if it cannot return a valid address.
-  Data_t* bypass_destAddress(Data_t* header, Data_t* data_ptr){
+  Data_t* bypass_destAddress(const Data_t* const header, Data_t* data_ptr) const{
     // Step past src address, if present.
     if(MAP::get_destAddressPresent(*header))
       return c78Pass(data_ptr);
@@ -103,7 +103,7 @@ public:
   }
 // Bypass the src address field, if present.
 // Returns NULL if it cannot return a valid address.
-  Data_t* bypass_srcAddress(Data_t* header, Data_t* data_ptr){
+  Data_t* bypass_srcAddress(const Data_t* const header, Data_t* data_ptr) const{
     // Step past src address, if present.
     if(MAP::get_srcAddressPresent(*header))
       return c78Pass(data_ptr);
@@ -112,7 +112,7 @@ public:
   }
 
 // Get a pointer to the next-proto field.
-  Data_t* get_nextProto(Data_t* header){
+  Data_t* get_nextProto(Data_t* const header) const{
   // Sanity check
     if(! MAP::get_nextProtoPresent(*header))
       return NULL;
@@ -121,7 +121,7 @@ public:
     return (header + 1 > back())? NULL : header + 1;
   }
 // Get a pointer to the dest-address field.
-  Data_t* get_destAddress(Data_t* header){
+  Data_t* get_destAddress(Data_t* const header) const{
   // Sanity check
     if(! MAP::get_destAddressPresent(*header))
       return NULL;
@@ -130,7 +130,7 @@ public:
     return bypass_nextProto(header, header + 1);
   }
 // Get a pointer to the src-address field.
-  Data_t* get_srcAddress(Data_t *header){
+  Data_t* get_srcAddress(Data_t* const header) const{
   // Sanity check
     if(! MAP::get_srcAddressPresent(*header))
       return NULL;
@@ -139,13 +139,13 @@ public:
     return bypass_destAddress(header, bypass_nextProto(header, header + 1));
   }
 // Get a pointer to the packet contents (everything after headers).
-  Data_t* get_contents(Data_t *header){
+  Data_t* get_contents(Data_t* const header) const{
   // Begin at first byte after header (header + 1). Bypass next-proto, dest-address, and src-address.
     return bypass_srcAddress( header, bypass_destAddress(header, bypass_nextProto(header, header + 1)) );
   }
 // Get the next header, if any.
 // Returns NULL if the next-proto is not MAP.
-  Data_t* get_next_header(Data_t *header){
+  Data_t* get_next_header(Data_t* const header){
   // Make sure next-proto is MAP.
     Data_t* data_ptr = get_nextProto(header);
     if(data_ptr == NULL || *data_ptr != MAP::Protocol__MAP)
@@ -178,17 +178,38 @@ public:
 // in the outermost encapsulation to be considered valid.
 // If the remove_checksums argument is true, then any checksums present will be removed
 // once validated.
-  bool validate(bool require_checksum = false, bool remove_checksums = true);
+  bool validate(const bool require_checksum = false, const bool remove_checksums = true);
 
 // Validate a checksum from the header at data_ptr to the end of the checksum
 // just before stop_ptr.
-  bool validateChecksum(Data_t *data_ptr, Data_t *stop_ptr);
+  bool validateChecksum(const Data_t* data_ptr, const Data_t* stop_ptr);
 
 // Append a checksum to the packet, if there is not already one present.
 //
 // Returns true if the packet already contained a checksum or a checksum has been successfully appended.
 // False otherwise (e.g. if unable to append sufficient memory).
   bool appendChecksum();
+
+// C78-sink a numeric value
+  bool sinkC78(uint32_t value, const uint8_t capacity_increment = 1, const uint8_t capacity_limit = DefaultCapacityLimit);
+  bool sinkC78Signed(int32_t value, const uint8_t capacity_increment = 1, const uint8_t capacity_limit = DefaultCapacityLimit){
+    if(value < 0)
+      value = (-value << 1) | 0x01;
+    else  // Hopefully puts a zero in the LSb. Consistently.
+      value = value << 1;
+
+    return sinkC78(value, capacity_increment, capacity_limit);
+  }
+// Source a C78-encoded big-endian numeric value.
+  bool sourceC78(uint32_t &value, Data_t*& data_ptr);
+  bool sourceC78Signed(uint32_t &value, Data_t*& data_ptr){
+    if(! sourceC78(value, data_ptr)) return false;
+    if(value & 0x01)
+      value = -value >> 1;
+    else
+      value = value >> 1;
+    return true;
+  }
 };
 
 

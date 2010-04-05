@@ -12,7 +12,7 @@
 // Allows for comparison.
 class AddressDefinition {
 public:
-  virtual bool compareAddress(MAP::AddressType_t *cmp_addressType, MAP::Data_t *cmp_addressValue) = 0;
+  virtual bool compareAddress(const MAP::AddressType_t* cmp_addressType, const MAP::Data_t* cmp_addressValue) const = 0;
 };
 
 class ShortAddressDefinition : public AddressDefinition {
@@ -22,11 +22,11 @@ private:
 
 public:
 
-  ShortAddressDefinition(MAP::AddressType_t new_addressType, uint8_t new_addressValue)
+  ShortAddressDefinition(const MAP::AddressType_t &new_addressType, const uint8_t &new_addressValue)
   : addressType(new_addressType), addressValue(new_addressValue)
   { }
 
-  bool compareAddress(MAP::AddressType_t *cmp_addressType, uint8_t *cmp_addressValue){
+  bool compareAddress(const MAP::AddressType_t* const cmp_addressType, const uint8_t* const cmp_addressValue) const{
     return ( (*cmp_addressType == addressType) && (*cmp_addressValue == addressValue) );
   }
 };
@@ -45,12 +45,12 @@ private:
   MAP::MAPPacketSink *packetSink;
 
 public:
-  ShortAddressPacketFilter(AddressDefinition *new_addressDefinition, MAP::MAPPacketSink *new_packetSink)
+  ShortAddressPacketFilter(AddressDefinition* const new_addressDefinition, MAP::MAPPacketSink* const new_packetSink)
   : addressDefinition(new_addressDefinition),
     packetSink(new_packetSink)
   { }
   
-  Status::Status_t sinkPacket(MAP::MAPPacket *packet){
+  Status::Status_t sinkPacket(MAP::MAPPacket* const packet){
   // Check address.
     MAP::Data_t *header = packet->get_first_header();
   // Look for header with dest address of correct type.
@@ -65,6 +65,8 @@ public:
       if(! addressDefinition->compareAddress(&addressType, packet->get_destAddress(header))){
         DEBUGprint("Binding filter: Dest address does not match filter.\n");
         continue;
+      }else{
+        DEBUGprint("Binding filter: Dest address matches filter.\n");
       }
 
     // Match found!
@@ -92,11 +94,11 @@ private:
 
 public:
 
-  BroadcastRouter(MAPPacketSink **sinks_buffer, Capacity_t sinks_buffer_capacity)
+  BroadcastRouter(MAPPacketSink** const sinks_buffer, const Capacity_t sinks_buffer_capacity)
   : sinks(sinks_buffer, sinks_buffer_capacity)
   { }
 
-  Status::Status_t addSink(MAPPacketSink *new_sink){
+  Status::Status_t addSink(MAPPacketSink* const &new_sink){
     return sinks.sinkData(new_sink);
   }
 

@@ -6,7 +6,7 @@
 #include "MAPPacket.cpp"
 
 // Allocate a new packet.
-bool MAP::allocateNewPacket(MAPPacket **packet, uint16_t capacity){
+bool MAP::allocateNewPacket(MAPPacket** const packet, const uint16_t &capacity){
   assert(capacity > 0);
 
 // Attempt to allocate initial packet

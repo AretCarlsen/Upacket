@@ -17,6 +17,9 @@ namespace MEP {
 // Encode a packet to an outgoing bytestream.
 class MEPEncoder : public MAP::MAPPacketSink, public Process {
 private:
+// Current control prefix
+  MAP::Data_t controlPrefix;
+
 // Current packet
   MAP::MAPPacket *packet;
 // Current packet data
@@ -34,8 +37,9 @@ public:
 
 // Constructor
   //MEPEncoder(DataTransfer::DataSink<MEP::Data_t, Status::Status_t> *new_outputSink)
-  MEPEncoder(DataStore::RingBuffer<MEP::Data_t, Status::Status_t> *new_outputSink)
-  : packet(NULL),
+  MEPEncoder(DataStore::RingBuffer<MEP::Data_t, Status::Status_t> *new_outputSink, MAP::Data_t new_controlPrefix = MEP::DefaultControlPrefix)
+  : controlPrefix(new_controlPrefix),
+    packet(NULL),
     controlCollisionInProgress(false),
     outputSink(new_outputSink)
   {
@@ -45,7 +49,7 @@ public:
 
 // Accept a packet to be encoded.
 // Non-blocking. May return Good, Busy, or Bad (rejected).
-  Status::Status_t sinkPacket(MAP::MAPPacket *new_packet);
+  Status::Status_t sinkPacket(MAP::MAPPacket* const new_packet);
 
 // Continue encoding the packet.
   Status::Status_t process();
@@ -61,7 +65,7 @@ DEBUGprint("MEPEncoder: Resetting.\n");
     controlCollisionInProgress = false;
   }
 
-  bool isBusy(){
+  bool isBusy() const{
     return (packet != NULL);
   }
 };
