@@ -1,11 +1,13 @@
 #pragma once
 
-#include "Routing.hpp"
+#include "../globals.hpp"
+#include "../../DataStore/Buffer.hpp"
+#include "../MAP/MAP.hpp"
 
 // SimpleServer class
 class SimpleServer : public MAP::MAPPacketSink {
 protected:
-  MAP::MAPPacket *packet;
+  MAP::OffsetMAPPacket offsetPacket;
 
   static const uint8_t InitialReplyPacketCapacity = 8;
   static const uint8_t IncrementReplyPacketCapacity = 8;
@@ -13,16 +15,17 @@ protected:
 public:
 
   SimpleServer()
-  : packet(NULL)
+  : offsetPacket(NULL, 0)
   { }
 
-  Status::Status_t sinkPacket(MAP::MAPPacket* const new_packet){
-    if(packet != NULL)
+  Status::Status_t sinkPacket(MAP::MAPPacket* const packet, MAP::MAPPacket::Offset_t headerOffset){
+    if(offsetPacket.packet != NULL)
       return Status::Status__Bad;
 
-    packet = new_packet;
+    offsetPacket.packet = packet;
+    offsetPacket.headerOffset = headerOffset;
 // Note packet in use.
-    MAP::referencePacket(packet);
+    MAP::referencePacket(offsetPacket.packet);
 
     return Status::Status__Good;
   }
@@ -33,9 +36,9 @@ public:
   }
 
   Status::Status_t finishedWithPacket(){
-    packet->sinkStatus(Status::Status__Complete);
-    MAP::dereferencePacket(packet);
-    packet = NULL;
+    offsetPacket.packet->sinkStatus(Status::Status__Complete);
+    MAP::dereferencePacket(offsetPacket.packet);
+    offsetPacket.packet = NULL;
 
     return Status::Status__Good;
   }

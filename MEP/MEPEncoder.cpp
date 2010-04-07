@@ -3,7 +3,7 @@
 #include "MEPEncoder.hpp"
 
 // Begin processing a new packet
-Status::Status_t MEP::MEPEncoder::sinkPacket(MAP::MAPPacket *new_packet){
+Status::Status_t MEP::MEPEncoder::sinkPacket(MAP::MAPPacket *new_packet, MAP::MAPPacket::Offset_t headerOffset){
 DEBUGprint("MEPEncoder: Considering packet.\n");
 
   // Busy? Then refuse to accept.
@@ -13,11 +13,12 @@ DEBUGprint("MEPEncoder: Considering packet.\n");
 DEBUGprint("MEPEncoder: Accepting packet.\n");
 
   // Save packet for later calls to process().
-  packet = new_packet;
+  offsetPacket.packet = new_packet;
+  offsetPacket.headerOffset = headerOffset;
 
   // Set packet status.
-  packet->sinkStatus(Status::Status__Busy);
-  MAP::referencePacket(packet);
+  offsetPacket.packet->sinkStatus(Status::Status__Busy);
+  MAP::referencePacket(offsetPacket.packet);
 
   // Packet has been accepted.
   return Status::Status__Good;
@@ -36,13 +37,13 @@ STATE_MACHINE__BEGIN(state);
   // Initialize
   controlCollisionInProgress = false;
   // Current packet position
-  packetData = packet->front();
+  packetData = offsetPacket.packet->get_header(offsetPacket.headerOffset);
 
 // Checkpoint: Transmitting data.
 STATE_MACHINE__CHECKPOINT(state);
 
     // Comparison is a little shifty...
-  while(packetData < packet->back()){
+  while(packetData < offsetPacket.packet->back()){
     // Consecutive or terminating bytes that collide with the MEP control byte need to be encoded.
     // Check for a byte matching the MEP control prefix (masked) directly following a byte that
     // exactly matches the MEP control character (prefix).
@@ -96,7 +97,7 @@ STATE_MACHINE__CHECKPOINT(state);
     return Status::Status__Good;
 
   // Indicate packet processing is complete.
-  packet->sinkStatus(Status::Status__Complete);
+  offsetPacket.packet->sinkStatus(Status::Status__Complete);
 
   // Reset encoder state.
   reset();

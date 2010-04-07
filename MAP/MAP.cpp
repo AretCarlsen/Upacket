@@ -7,7 +7,8 @@
 
 // Allocate a new packet.
 bool MAP::allocateNewPacket(MAPPacket** const packet, const uint16_t &capacity){
-  assert(capacity > 0);
+// Sanity check
+  if(capacity == 0) return false;
 
 // Attempt to allocate initial packet
   MAPPacket *newPacket = new MAPPacket;
@@ -25,7 +26,7 @@ bool MAP::allocateNewPacket(MAPPacket** const packet, const uint16_t &capacity){
 DEBUGprint("allocateNewPacket: Allocated new packet.\n");
 
 // Set the new packet's header byte to all zeroes
-  *(newPacket->get_first_header()) = 0;
+  *(newPacket->front()) = 0;
 
 // Save new packet.
   *packet = newPacket;

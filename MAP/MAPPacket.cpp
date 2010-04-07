@@ -3,24 +3,6 @@
 #include "../PosixCRC32ChecksumEngine/PosixCRC32ChecksumEngine.hpp"
 
 
-// Append a data byte to a packet, expanding the packet's capacity if necessary.
-// Will not expand beyond capacity_limit.
-bool MAP::MAPPacket::sinkExpand(Data_t data, uint8_t capacity_increment, uint8_t capacity_limit){
-// Attempt to sink
-  if(sinkData(data) != Status::Status__Good){
-  // Attempt to expand and sink again, or fail. (Don't expand beyond capacity_limit.)
-    if((get_capacity() + capacity_increment > capacity_limit)
-       || !(
-               set_capacity(get_capacity() + capacity_increment)
-            && (sinkData(data) == Status::Status__Good)
-       )
-    )
-      return false;
-  }
-
-  return true;
-}
-
 // Sink a numeric value in C78-encoded big-endian format.
 bool MAP::MAPPacket::sinkC78(const uint32_t value, const uint8_t capacity_increment, const uint8_t capacity_limit){
   // Calculate extra C78 bytes required (before concluding byte, with its 0 MSb).
@@ -49,12 +31,9 @@ bool MAP::MAPPacket::sourceC78(uint32_t &value, Data_t*& data_ptr){
   while(data_ptr < back()){
     value |= *data_ptr & 0x7F;
   // Check if C78 value has concluded.
-    if(!(*data_ptr & 0x80)){
-      DEBUGprint("sourceC78: terminal byte\n");
+    if(!(*data_ptr & 0x80))
       break;
-    }
 
-    DEBUGprint("sourceC78: non-terminal byte\n");
   // Left-shift in preparation for next byte.
     value <<= 7;
   // Next byte.
@@ -71,14 +50,13 @@ bool MAP::MAPPacket::sourceC78(uint32_t &value, Data_t*& data_ptr){
 // in the outermost encapsulation to be considered valid.
 // If the remove_checksums argument is true, then any checksums present will be removed
 // once validated. (Note that the process aborts after encountering the first packet error.)
-bool MAP::MAPPacket::validate(bool require_checksum, bool remove_checksums){
+bool MAP::MAPPacket::validate(Offset_t headerOffset, bool require_checksum, bool remove_checksums){
 // Make sure packet includes at least an initial header
-  if(get_size() == 0)
-    return false;
-
 // Make sure packet includes an outermost checksum, if requested.
-  if(require_checksum && !( get_checksumPresent(*(get_first_header())) ))
-    return false;
+  Data_t* header_ptr = get_header(headerOffset);
+  if(   header_ptr == NULL
+     || ( require_checksum && !get_checksumPresent(*header_ptr) )
+    ) return false;
 
   DEBUGprint("validate: Checksum present. packet capacity = %u. packet size = %u\n", get_capacity(), get_size());
 
@@ -88,12 +66,12 @@ bool MAP::MAPPacket::validate(bool require_checksum, bool remove_checksums){
   // pass to feed all the headers through the checksum engine,
   // especially if the packet data is stored in something slower
   // than RAM.
-  Data_t* data_ptr = get_data();
+  Data_t* data_ptr = get_data(header_ptr);
   if(data_ptr == NULL)
     return false;
 
   // Initial header and stop_ptr.
-  Data_t *header = get_first_header();
+  Data_t *header = get_header(headerOffset);
   Data_t *stop_ptr = back();
 
   // Stop at actual data (no more MAP headers).
@@ -106,6 +84,9 @@ bool MAP::MAPPacket::validate(bool require_checksum, bool remove_checksums){
 
     // Encapsulated data is now one checksum back.
       stop_ptr -= MAP::ChecksumLength;
+
+      if(remove_checksums)
+        MAP::set_checksumPresent(*header, false);
     }
 
   // Next header
@@ -115,11 +96,10 @@ bool MAP::MAPPacket::validate(bool require_checksum, bool remove_checksums){
 // If requested, cut off all checksums.
   if(remove_checksums){
     // Set the packet size such that the checksums (at the end) are all removed.
-    // (Because get_first_header() is equal to front()).
-    set_size(stop_ptr - get_first_header());
+    set_size(stop_ptr - front());
   }
 
-  // Checkums (if any) were all valid.
+  // Checksums (if any) were all valid.
   return true;
 }
 
@@ -178,14 +158,17 @@ DEBUGprint("Checksum byte invalid. Expected %X, received %X.\n", checksum & 0xFF
 // Eventually, this should be broken out into a function that takes a stop_ptr
 // to allow callers to append checksums to sub-packets. Would require a little
 // footwork to move data after the stop_ptr out to provide for the CRC bytes.
-bool MAP::MAPPacket::appendChecksum(){
+bool MAP::MAPPacket::appendChecksum(Offset_t headerOffset){
 DEBUGprint("appendChecksum: Start\n");
 
+  // Set checksum presence bit
+  Data_t *header = get_header(headerOffset);
+
 // Packet must have at least one byte.
-  assert(get_first_header() != NULL);
+  if(header == NULL) return false;
 
   // Check if packet already contains checksum
-  if(MAP::get_checksumPresent(*(get_first_header())))
+  if(MAP::get_checksumPresent(*header))
     return true;
 
 DEBUGprint("appendChecksum: Checksum not already present.\n");
@@ -193,23 +176,21 @@ DEBUGprint("appendChecksum: packet capacity = %u.\n", get_capacity());
 DEBUGprint("appendChecksum: packet size = %u.\n", get_size());
 
   // Make sure packet has sufficient buffer capacity to store the additional 4 CRC bytes.
-  if(get_capacity() - get_size() < ChecksumLength){
+  if(get_availableCapacity() < ChecksumLength){
     // Attempt to increase capacity
-    if(! set_capacity(get_capacity() + ChecksumLength)){
+    if(! set_availableCapacity(ChecksumLength)){
 DEBUGprint("appendChecksum: Unable to expand.\n");
       return false;
     }
   }
 
-  // Set checksum presence bit
-  Data_t *header = get_first_header();
   *header = MAP::set_checksumPresent(*header, true);
 
   // Checksum calculation engine.
   PosixCRC32ChecksumEngine checksumEngine;
 
   // Calculate checksum
-  for(MAP::Data_t *data_ptr = get_first_header(); data_ptr < back(); data_ptr++)
+  for(MAP::Data_t *data_ptr = header; data_ptr < back(); data_ptr++)
     checksumEngine.sinkData(*data_ptr);
 
   Checksum_t checksum = checksumEngine.getChecksum();

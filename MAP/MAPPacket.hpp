@@ -19,6 +19,8 @@ class MAPPacket : public DataStore::DynamicArrayBuffer<Data_t, PACKET_CAPACITY_T
 public:
   typedef PACKET_CAPACITY_T Capacity_t;
 
+  typedef uint8_t Offset_t;
+
 private:
   Capacity_t dataOffset;
 
@@ -38,20 +40,29 @@ public:
   static const Capacity_t DefaultCapacityLimit = 50;
 
 // Append a data byte to a packet, expanding the packet's capacity if necessary.
-  bool sinkExpand(Data_t data, const uint8_t capacity_increment = 1, const uint8_t capacity_limit = DefaultCapacityLimit);
+  inline bool sinkExpand(Data_t data, const uint8_t capacity_increment = 1, const uint8_t capacity_limit = DefaultCapacityLimit){
+    return DataStore::DynamicArrayBuffer<Data_t,Capacity_t>::sinkExpand(data, capacity_increment, capacity_limit);
+  }
 
-  uint8_t incrementReferenceCount(){
+  inline uint8_t incrementReferenceCount(){
     return ++referenceCount;
   }
-  uint8_t decrementReferenceCount(){
+  inline uint8_t decrementReferenceCount(){
     if(referenceCount == 0)
       return 0;
     else
       return --referenceCount;
   }
 
-  Data_t* get_first_header() const{
+  inline Data_t* get_first_header() const{
     return front();
+  }
+
+  inline Data_t* get_header(Offset_t headerOffset){
+    Data_t *header_ptr = get_first_header();
+    for(; headerOffset > 0; headerOffset--)
+      header_ptr = get_next_header(header_ptr);
+    return header_ptr;
   }
 
 /*
@@ -168,8 +179,8 @@ public:
     return get_contents(header);
   }
 // Get the first non-MAP packet contents.
-  Data_t* get_data(){
-    return get_data(get_first_header());
+  Data_t* get_data(Offset_t headerOffset){
+    return get_data(get_header(headerOffset));
   }
 
 // Validate the MAP packet.
@@ -178,7 +189,7 @@ public:
 // in the outermost encapsulation to be considered valid.
 // If the remove_checksums argument is true, then any checksums present will be removed
 // once validated.
-  bool validate(const bool require_checksum = false, const bool remove_checksums = true);
+  bool validate(Offset_t headerOffset = 0, const bool require_checksum = false, const bool remove_checksums = true);
 
 // Validate a checksum from the header at data_ptr to the end of the checksum
 // just before stop_ptr.
@@ -188,26 +199,29 @@ public:
 //
 // Returns true if the packet already contained a checksum or a checksum has been successfully appended.
 // False otherwise (e.g. if unable to append sufficient memory).
-  bool appendChecksum();
+  bool appendChecksum(Offset_t headerOffset = 0);
 
 // C78-sink a numeric value
-  bool sinkC78(uint32_t value, const uint8_t capacity_increment = 1, const uint8_t capacity_limit = DefaultCapacityLimit);
-  bool sinkC78Signed(int32_t value, const uint8_t capacity_increment = 1, const uint8_t capacity_limit = DefaultCapacityLimit){
-    if(value < 0)
-      value = (-value << 1) | 0x01;
-    else  // Hopefully puts a zero in the LSb. Consistently.
-      value = value << 1;
+  bool sinkC78(const uint32_t value, const uint8_t capacity_increment = 1, const uint8_t capacity_limit = DefaultCapacityLimit);
+  bool sinkC78Signed(const int32_t value, const uint8_t capacity_increment = 1, const uint8_t capacity_limit = DefaultCapacityLimit){
+    uint32_t unsigned_value;
+    if(value < 0)  // Handle negative values specially.
+      unsigned_value = (-(value+1) << 1) | 0x01;  // Add one to account for -0.
+    else  // Positive values are just left-shifted a bit.
+      unsigned_value = value << 1;  // Arithmetic bit shift s.t. the LSb is filled with a 0.
 
-    return sinkC78(value, capacity_increment, capacity_limit);
+    return sinkC78(unsigned_value, capacity_increment, capacity_limit);
   }
 // Source a C78-encoded big-endian numeric value.
+  //  template <typename IntType_t>
   bool sourceC78(uint32_t &value, Data_t*& data_ptr);
-  bool sourceC78Signed(uint32_t &value, Data_t*& data_ptr){
-    if(! sourceC78(value, data_ptr)) return false;
-    if(value & 0x01)
-      value = -value >> 1;
+  bool sourceC78Signed(int32_t &value, Data_t*& data_ptr){
+    uint32_t unsigned_value;
+    if(! sourceC78(unsigned_value, data_ptr)) return false;
+    if(unsigned_value & 0x01)  // Handle negative values
+      value = -(unsigned_value >> 1) - 1;   // Subtract 1 to account for -0.
     else
-      value = value >> 1;
+      value = unsigned_value >> 1;  // The MSb 
     return true;
   }
 };

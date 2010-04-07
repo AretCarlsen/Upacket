@@ -193,12 +193,12 @@ public:
   { }
 
 // Generate a checksum for a packet.
-  Status::Status_t sinkPacket(MAPPacket* packet){
+  Status::Status_t sinkPacket(MAPPacket* packet, MAPPacket::Offset_t headerOffset = 0){
     assert(nextSink != NULL);
     assert(packet != NULL);
 
 // Generate checksum and append, if necessary
-    if(packet->appendChecksum())
+    if(packet->appendChecksum(headerOffset))
       return nextSink->sinkPacket(packet);
   // Checksum generation can fail if add'l memory cannot be allocated, for instance.
     else
@@ -219,14 +219,14 @@ public:
   { }
 
 // Validate a packet.
-  Status::Status_t sinkPacket(MAP::MAPPacket *packet){
+  Status::Status_t sinkPacket(MAP::MAPPacket *packet, MAPPacket::Offset_t headerOffset = 0){
     assert(nextSink != NULL);
     assert(packet != NULL);
 
   // Validate checksum
-    if(packet->validate()){
+    if(packet->validate(headerOffset)){
       DEBUGprint("PacketValidator: Packet valid.\n");
-      return nextSink->sinkPacket(packet);
+      return nextSink->sinkPacket(packet, headerOffset);
     }else{
       DEBUGprint("PacketValidator: Packet invalid.\n");
       return Status::Status__Bad;

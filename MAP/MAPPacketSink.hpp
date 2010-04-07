@@ -3,26 +3,37 @@ namespace MAP {
 
 class MAPPacketSink {
 public:
-  virtual Status::Status_t sinkPacket(MAPPacket *packet) = 0;
+  // HeaderOffset limited to 256, obviously.
+  virtual Status::Status_t sinkPacket(MAPPacket *packet, MAPPacket::Offset_t headerOffset = 0) = 0;
+};
+
+class OffsetMAPPacket {
+public:
+  MAPPacket *packet;
+  MAPPacket::Offset_t headerOffset;
+
+  OffsetMAPPacket(MAPPacket *new_packet = NULL, MAPPacket::Offset_t new_headerOffset = 0)
+  : packet(new_packet), headerOffset(new_headerOffset)
+  { }
 };
 
 class MAPPacketBuffer : public MAPPacketSink, public Process {
-  DataStore::RingBuffer<MAPPacket*, uint8_t> packetBuffer;
+  DataStore::RingBuffer<OffsetMAPPacket, uint8_t> packetBuffer;
 
   MAPPacketSink *packetSink;
 
 public:
 
-  MAPPacketBuffer(MAPPacketSink *new_packetSink, MAPPacket** raw_packet_buffer, uint8_t buffer_capacity)
+  MAPPacketBuffer(MAPPacketSink *new_packetSink, OffsetMAPPacket* raw_packet_buffer, uint8_t buffer_capacity)
   : packetBuffer(raw_packet_buffer, buffer_capacity),
     packetSink(new_packetSink)
   { }
 
-  Status::Status_t sinkPacket(MAPPacket* const packet){
+  Status::Status_t sinkPacket(MAPPacket* const packet, MAPPacket::Offset_t headerOffset){
   // If the packet buffer is empty, try to sink the packet immediately.
     if(packetBuffer.is_empty()){
     // Try to sink the packet
-      Status::Status_t tempStatus = packetSink->sinkPacket(packet);
+      Status::Status_t tempStatus = packetSink->sinkPacket(packet, headerOffset);
     // If the packet sink was not busy, return transparently.
       if(tempStatus != Status::Status__Busy)
         return tempStatus;
@@ -35,7 +46,8 @@ public:
     referencePacket(packet);
   // Append the packet to the buffer
     // Could skip safety checks, since we have already verified the buffer is not full.
-    packetBuffer.sinkData(packet);
+    
+    packetBuffer.sinkData(OffsetMAPPacket(packet, headerOffset));
 
   // Packet has been buffered.
     return Status::Status__Good;
@@ -46,12 +58,12 @@ public:
     if(! packetBuffer.is_empty()){
     // Temporarily pop a packet. If the sink does not return Busy, permanently remove
     // the packet from the buffer.
-      MAPPacket* packet = packetBuffer.get_in_place();
-      if(packetSink->sinkPacket(packet) != Status::Status__Busy){
+      OffsetMAPPacket offsetPacket = packetBuffer.get_in_place();
+      if(packetSink->sinkPacket(offsetPacket.packet, offsetPacket.headerOffset) != Status::Status__Busy){
         // Finish pop.
         packetBuffer.increment_read_position();
         // Dereference the packet.
-        dereferencePacket(packet);
+        dereferencePacket(offsetPacket.packet);
       }
     }
 

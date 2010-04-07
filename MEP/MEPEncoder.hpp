@@ -21,7 +21,7 @@ private:
   MAP::Data_t controlPrefix;
 
 // Current packet
-  MAP::MAPPacket *packet;
+  MAP::OffsetMAPPacket offsetPacket;
 // Current packet data
   Packet::Data_t *packetData;
 
@@ -39,7 +39,7 @@ public:
   //MEPEncoder(DataTransfer::DataSink<MEP::Data_t, Status::Status_t> *new_outputSink)
   MEPEncoder(DataStore::RingBuffer<MEP::Data_t, Status::Status_t> *new_outputSink, MAP::Data_t new_controlPrefix = MEP::DefaultControlPrefix)
   : controlPrefix(new_controlPrefix),
-    packet(NULL),
+    offsetPacket(NULL, 0),
     controlCollisionInProgress(false),
     outputSink(new_outputSink)
   {
@@ -49,7 +49,7 @@ public:
 
 // Accept a packet to be encoded.
 // Non-blocking. May return Good, Busy, or Bad (rejected).
-  Status::Status_t sinkPacket(MAP::MAPPacket* const new_packet);
+  Status::Status_t sinkPacket(MAP::MAPPacket* const new_packet, MAP::MAPPacket::Offset_t headerOffset);
 
 // Continue encoding the packet.
   Status::Status_t process();
@@ -58,15 +58,15 @@ public:
   void reset(){
 DEBUGprint("MEPEncoder: Resetting.\n");
     STATE_MACHINE__RESET(state);
-    if(packet != NULL){
-      MAP::dereferencePacket(packet);
-      packet = NULL;
+    if(offsetPacket.packet != NULL){
+      MAP::dereferencePacket(offsetPacket.packet);
+      offsetPacket.packet = NULL;
     }
     controlCollisionInProgress = false;
   }
 
   bool isBusy() const{
-    return (packet != NULL);
+    return (offsetPacket.packet != NULL);
   }
 };
 
