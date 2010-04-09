@@ -53,12 +53,12 @@ bool MAP::MAPPacket::sourceC78(uint32_t &value, Data_t*& data_ptr){
 bool MAP::MAPPacket::validate(Offset_t headerOffset, bool require_checksum, bool remove_checksums){
 // Make sure packet includes at least an initial header
 // Make sure packet includes an outermost checksum, if requested.
-  Data_t* header_ptr = get_header(headerOffset);
-  if(   header_ptr == NULL
-     || ( require_checksum && !get_checksumPresent(*header_ptr) )
+  Data_t* header = get_header(headerOffset);
+  if(   header == NULL
+     || ( require_checksum && !get_checksumPresent(*header) )
     ) return false;
 
-  DEBUGprint("validate: Checksum present. packet capacity = %u. packet size = %u\n", get_capacity(), get_size());
+  DEBUGprint("MPPval: cap=%d, size=%d\n", get_capacity(), get_size());
 
 // Validate (possibly nested) MAP header structure.
   // This requires a pass through the entire header structure.
@@ -66,18 +66,18 @@ bool MAP::MAPPacket::validate(Offset_t headerOffset, bool require_checksum, bool
   // pass to feed all the headers through the checksum engine,
   // especially if the packet data is stored in something slower
   // than RAM.
-  Data_t* data_ptr = get_data(header_ptr);
+  Data_t* data_ptr = get_data(header);
   if(data_ptr == NULL)
     return false;
 
-  // Initial header and stop_ptr.
-  Data_t *header = get_header(headerOffset);
+  // Stop point
   Data_t *stop_ptr = back();
 
   // Stop at actual data (no more MAP headers).
   while(header != NULL){
   // If header indicates a checksum, validate it.
     if(get_checksumPresent(*header)){
+       DEBUGprint("MPPval: val crc\n");
     // Validate the checksum
       if(! validateChecksum(header, stop_ptr))
         return false;
@@ -85,8 +85,10 @@ bool MAP::MAPPacket::validate(Offset_t headerOffset, bool require_checksum, bool
     // Encapsulated data is now one checksum back.
       stop_ptr -= MAP::ChecksumLength;
 
-      if(remove_checksums)
-        MAP::set_checksumPresent(*header, false);
+      if(remove_checksums){
+        *header = MAP::set_checksumPresent(*header, false);
+        DEBUGprint("MPPval: rem crc\n");
+      }
     }
 
   // Next header
@@ -140,7 +142,7 @@ bool MAP::MAPPacket::validateChecksum(const Data_t* data_ptr, const Data_t* stop
     // This may not be the most efficient way to extract the LSB from the csum.
     // A cast to uint8_t may be better, for instance. Not sure.
     if(*data_ptr != (checksum & 0xFF)){
-DEBUGprint("Checksum byte invalid. Expected %X, received %X.\n", checksum & 0xFF, *data_ptr);
+      DEBUGprint("MPPvalCrc: CRC byte invalid. Exp %x, rcvd %x.\n", checksum & 0xFF, *data_ptr);
       return false;
     }
 
@@ -159,7 +161,7 @@ DEBUGprint("Checksum byte invalid. Expected %X, received %X.\n", checksum & 0xFF
 // to allow callers to append checksums to sub-packets. Would require a little
 // footwork to move data after the stop_ptr out to provide for the CRC bytes.
 bool MAP::MAPPacket::appendChecksum(Offset_t headerOffset){
-DEBUGprint("appendChecksum: Start\n");
+  DEBUGprint("apCrc: St\n");
 
   // Set checksum presence bit
   Data_t *header = get_header(headerOffset);
@@ -171,15 +173,13 @@ DEBUGprint("appendChecksum: Start\n");
   if(MAP::get_checksumPresent(*header))
     return true;
 
-DEBUGprint("appendChecksum: Checksum not already present.\n");
-DEBUGprint("appendChecksum: packet capacity = %u.\n", get_capacity());
-DEBUGprint("appendChecksum: packet size = %u.\n", get_size());
+  DEBUGprint("apCrc: Crc not pres. cap %d, size %d\n", get_capacity(), get_size());
 
   // Make sure packet has sufficient buffer capacity to store the additional 4 CRC bytes.
   if(get_availableCapacity() < ChecksumLength){
     // Attempt to increase capacity
     if(! set_availableCapacity(ChecksumLength)){
-DEBUGprint("appendChecksum: Unable to expand.\n");
+      DEBUGprint("apCrc: Expand failed\n");
       return false;
     }
   }
@@ -202,7 +202,7 @@ DEBUGprint("appendChecksum: Unable to expand.\n");
     checksum = checksum >> 8;
   }
 
-DEBUGprint("appendChecksum: Successfully appended. New packet size = %u.\n", get_size());
+  DEBUGprint("apCrc: App cmplt. New size: %d\n", get_size());
   return true;
 }
 

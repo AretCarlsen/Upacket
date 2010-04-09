@@ -19,11 +19,12 @@ bool MAP::allocateNewPacket(MAPPacket** const packet, const uint16_t &capacity){
 
 // Attempt to allocate buffer storage
   if(! newPacket->set_capacity(capacity)){
+    DEBUGprint("MP:allNewP: couldn't alloc %d\n", capacity);
     delete newPacket;
     return false;
   }
 
-DEBUGprint("allocateNewPacket: Allocated new packet.\n");
+  DEBUGprint("MP:allNewP: alloc'd %d\n", capacity);
 
 // Set the new packet's header byte to all zeroes
   *(newPacket->front()) = 0;

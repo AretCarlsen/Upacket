@@ -225,10 +225,10 @@ public:
 
   // Validate checksum
     if(packet->validate(headerOffset)){
-      DEBUGprint("PacketValidator: Packet valid.\n");
+      DEBUGprint("PV: p valid\n");
       return nextSink->sinkPacket(packet, headerOffset);
     }else{
-      DEBUGprint("PacketValidator: Packet invalid.\n");
+      DEBUGprint("PV: p invalid\n");
       return Status::Status__Bad;
     }
   }

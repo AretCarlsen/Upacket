@@ -78,14 +78,12 @@ public:
     if(data_ptr == NULL || data_ptr >= back())
       return NULL;
 
-//    DEBUGprint("c78pass: input data_ptr = %X, front() = %X, back() = %X\n", (unsigned int) data_ptr, (unsigned int) front(), (unsigned int) back());
   // Step through bytes until hit end of C78-encoded field
   // or end of packet.
     for(; data_ptr < back() && (! Code78::isLastByte(*data_ptr)); data_ptr++);
 
   // Pointer is at last C78 byte, need to advance one more.
     data_ptr++;
-//    DEBUGprint("c78pass: output data_ptr = %X\n", (uint32_t) data_ptr);
 
   // Sanity check
     if(data_ptr >= back())

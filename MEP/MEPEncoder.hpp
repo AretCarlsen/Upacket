@@ -56,7 +56,7 @@ public:
 
 // Reset the encoder.
   void reset(){
-DEBUGprint("MEPEncoder: Resetting.\n");
+    DEBUGprint("MEPe: rset\n");
     STATE_MACHINE__RESET(state);
     if(offsetPacket.packet != NULL){
       MAP::dereferencePacket(offsetPacket.packet);
