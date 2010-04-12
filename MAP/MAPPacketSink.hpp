@@ -37,20 +37,26 @@ public:
     // If the packet sink was not busy, return transparently.
       if(tempStatus != Status::Status__Busy)
         return tempStatus;
+    }
 
+/*
   // If the packet buffer is full, return Busy.
-    }else if(packetBuffer.is_full())
+    if(packetBuffer.is_full())
       return Status::Status__Busy;
+    // Could skip safety checks, since we have already verified the buffer is not full.
+*/
 
   // Reference the packet.
     referencePacket(packet);
-  // Append the packet to the buffer
-    // Could skip safety checks, since we have already verified the buffer is not full.
-    
-    packetBuffer.sinkData(OffsetMAPPacket(packet, headerOffset));
+  // Attempt to append the packet to the buffer
+    if(packetBuffer.sinkData(OffsetMAPPacket(packet, headerOffset))){
+    // Packet has been buffered.
+      return Status::Status__Good;
+    }
 
-  // Packet has been buffered.
-    return Status::Status__Good;
+  // Buffering failed
+    dereferencePacket(packet);
+    return Status::Status__Busy;
   }
 
   Status::Status_t process(){
@@ -62,7 +68,7 @@ public:
       if(packetSink->sinkPacket(offsetPacket.packet, offsetPacket.headerOffset) != Status::Status__Busy){
         // Finish pop.
         packetBuffer.increment_read_position();
-        // Dereference the packet.
+        // Dereference the packet (which we referenced upon sinking).
         dereferencePacket(offsetPacket.packet);
       }
     }

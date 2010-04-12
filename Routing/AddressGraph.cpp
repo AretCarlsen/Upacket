@@ -29,36 +29,46 @@ bool AddressFilter::isMatch(const uint8_t cmp_addressType, uint8_t* cmp_addressV
   return matched;
 }
 
+// Is processed immediately.
 Status::Status_t AddressGraph::sinkPacket(MAP::MAPPacket* const packet, uint8_t headerOffset){
-  DEBUGprint("AG::sP: Pack size %d, hO %d.\n", packet->get_size(), headerOffset);
-
+//  DEBUGprint_AG("AG::sP: Pack size %d, hO %d.\n", packet->get_size(), headerOffset);
   MAP::Data_t *header = packet->get_header(headerOffset);
-  if(header == NULL) return Status::Status__Bad;
+//  DEBUGprint_AG("D 0\n");
+  if(header == NULL){
+    return Status::Status__Bad;
+  }
 
   MAP::Data_t destAddressType = MAP::get_addressType(*header);
   MAP::Data_t *destAddressValue = packet->get_destAddress(header);
-  if(destAddressValue == NULL) return Status::Status__Bad;
+  if(destAddressValue == NULL){
+    return Status::Status__Bad;
+  }
 
-  DEBUGprint("AG::sP: pack addy X%x/X%x\n", destAddressType, *destAddressValue, localAddressType, localAddressValue);
+  if(destAddressType != MAP::AddressType__Topic){
+    DEBUGprint_AG("AG::sP: pack addy X%x/X%x\n", destAddressType, *destAddressValue, localAddressType, localAddressValue);
+  }
   if((destAddressType == localAddressType) && (*destAddressValue == localAddressValue)){
-    DEBUGprint("AG::sP: cmd packet match\n");
+    DEBUGprint_AG("AG::sP: cmd packet match\n");
     process_command_packet(packet, headerOffset);
   // Stop processing, to avoid loops.
     return Status::Status__Good;
   }
 
+  // Reference, in case receiver derefs
+  MAP::referencePacket(packet);
   for(AddressFilter *edge = addressEdges.front(); edge < addressEdges.back(); edge++){
     if(edge->isMatch(destAddressType, destAddressValue) && (edge->packetSinkIndex < packetSinks->get_size())){
-      DEBUGprint("AG::sP: Edge accepts: i %d, hO %d.\n", edge->packetSinkIndex, edge->headerOffset);
+      DEBUGprint_AG("AG::sP: acc: i%d h%d\n", edge->packetSinkIndex, edge->headerOffset);
       packetSinks->get(edge->packetSinkIndex)->sinkPacket(packet, headerOffset + edge->headerOffset);
     }
   }
+  MAP::dereferencePacket(packet);
 
   return Status::Status__Good;
 }
 
 void AddressGraph::command_add(MAP::MAPPacket* const packet, MAP::Data_t *data_ptr){
-  DEBUGprint("cmd_add() st\n");
+  DEBUGprint_MISC("cmd_add() st\n");
   AddressFilter newEdge;
 
   // Read sinkIndex
@@ -77,19 +87,19 @@ void AddressGraph::command_add(MAP::MAPPacket* const packet, MAP::Data_t *data_p
   data_ptr++;
   
   if(newEdge.mode == AddressFilter::Mode__MatchAll){
-    DEBUGprint("cmd_add: sinkEdge, m MA\n");
+    DEBUGprint_AG("cmd_add: sinkEdge, m MA\n");
     sinkEdge(newEdge);
     return;
   }
 
-  DEBUGprint("cmd_add: r aT\n");
+  DEBUGprint_AG("cmd_add: r aT\n");
   // Read addressType
   if(data_ptr >= packet->back() || (*data_ptr & 0x80)) return;
   newEdge.addressType = *data_ptr;
   data_ptr++;
   
   if(newEdge.mode == AddressFilter::Mode__AddressType){
-    DEBUGprint("cmd_add: sinkEdge, m AT\n");
+    DEBUGprint_AG("cmd_add: sinkEdge, m AT\n");
     sinkEdge(newEdge);
     return;
   }
@@ -97,13 +107,13 @@ void AddressGraph::command_add(MAP::MAPPacket* const packet, MAP::Data_t *data_p
 // Sanity check
   if(newEdge.mode != AddressFilter::Mode__MaskedAddressValue) return;
 
-  DEBUGprint("cmd_add: r aV\n");
+  DEBUGprint_AG("cmd_add: r aV\n");
   // Read addressValue
   if(data_ptr >= packet->back() || (*data_ptr & 0x80)) return;
   newEdge.addressValue = *data_ptr;
   data_ptr++;
 
-  DEBUGprint("cmd_add: r aVM\n");
+  DEBUGprint_AG("cmd_add: r aVM\n");
   // Read addressValueMask
   if(data_ptr >= packet->back()) return;
   newEdge.addressValueMask = *data_ptr & 0x7F;
@@ -117,7 +127,7 @@ void AddressGraph::command_add(MAP::MAPPacket* const packet, MAP::Data_t *data_p
   }else
     newEdge.addressValueMask = *data_ptr;
 
-  DEBUGprint("cmd_add: sinkEdge, m MV\n");
+  DEBUGprint_AG("cmd_add: sinkEdge, m MV\n");
   sinkEdge(newEdge);
 
   return;

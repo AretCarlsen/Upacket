@@ -6,7 +6,12 @@
 
 #pragma once
 
-#include "../Bpacket/Bpacket.hpp"
+#include "../globals.hpp"
+// Dynamic arrays
+#include "../../DataStore/Buffer.hpp"
+// Status codes
+#include "../../Status/Status.hpp"
+//#include "../Bpacket/Bpacket.hpp"
 #include "../Code78/Code78.hpp"
 #include "../../Process/Process.hpp"
 #include "../../DataStore/RingBuffer.hpp"
@@ -225,10 +230,10 @@ public:
 
   // Validate checksum
     if(packet->validate(headerOffset)){
-      DEBUGprint("PV: p valid\n");
+      DEBUGprint_MAP("PV: p valid\n");
       return nextSink->sinkPacket(packet, headerOffset);
     }else{
-      DEBUGprint("PV: p invalid\n");
+      DEBUGprint_MAP("PV: p invalid\n");
       return Status::Status__Bad;
     }
   }

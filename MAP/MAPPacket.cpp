@@ -2,7 +2,6 @@
 #include "MAP.hpp"
 #include "../PosixCRC32ChecksumEngine/PosixCRC32ChecksumEngine.hpp"
 
-
 // Sink a numeric value in C78-encoded big-endian format.
 bool MAP::MAPPacket::sinkC78(const uint32_t value, const uint8_t capacity_increment, const uint8_t capacity_limit){
   // Calculate extra C78 bytes required (before concluding byte, with its 0 MSb).
@@ -58,7 +57,7 @@ bool MAP::MAPPacket::validate(Offset_t headerOffset, bool require_checksum, bool
      || ( require_checksum && !get_checksumPresent(*header) )
     ) return false;
 
-  DEBUGprint("MPPval: cap=%d, size=%d\n", get_capacity(), get_size());
+  DEBUGprint_MAP("MPPval: cap=%d, size=%d\n", get_capacity(), get_size());
 
 // Validate (possibly nested) MAP header structure.
   // This requires a pass through the entire header structure.
@@ -77,7 +76,7 @@ bool MAP::MAPPacket::validate(Offset_t headerOffset, bool require_checksum, bool
   while(header != NULL){
   // If header indicates a checksum, validate it.
     if(get_checksumPresent(*header)){
-       DEBUGprint("MPPval: val crc\n");
+       DEBUGprint_MAP("MPPval: val crc\n");
     // Validate the checksum
       if(! validateChecksum(header, stop_ptr))
         return false;
@@ -87,7 +86,7 @@ bool MAP::MAPPacket::validate(Offset_t headerOffset, bool require_checksum, bool
 
       if(remove_checksums){
         *header = MAP::set_checksumPresent(*header, false);
-        DEBUGprint("MPPval: rem crc\n");
+        DEBUGprint_MAP("MPPval: rem crc\n");
       }
     }
 
@@ -99,6 +98,8 @@ bool MAP::MAPPacket::validate(Offset_t headerOffset, bool require_checksum, bool
   if(remove_checksums){
     // Set the packet size such that the checksums (at the end) are all removed.
     set_size(stop_ptr - front());
+    // Try to eliminate excess capacity
+    //set_capacity(stop_ptr - front());
   }
 
   // Checksums (if any) were all valid.
@@ -142,7 +143,7 @@ bool MAP::MAPPacket::validateChecksum(const Data_t* data_ptr, const Data_t* stop
     // This may not be the most efficient way to extract the LSB from the csum.
     // A cast to uint8_t may be better, for instance. Not sure.
     if(*data_ptr != (checksum & 0xFF)){
-      DEBUGprint("MPPvalCrc: CRC byte invalid. Exp %x, rcvd %x.\n", checksum & 0xFF, *data_ptr);
+      DEBUGprint_MAP("MPPvalCrc: CRC byte invalid. Exp %x, rcvd %x.\n", checksum & 0xFF, *data_ptr);
       return false;
     }
 
@@ -161,7 +162,7 @@ bool MAP::MAPPacket::validateChecksum(const Data_t* data_ptr, const Data_t* stop
 // to allow callers to append checksums to sub-packets. Would require a little
 // footwork to move data after the stop_ptr out to provide for the CRC bytes.
 bool MAP::MAPPacket::appendChecksum(Offset_t headerOffset){
-  DEBUGprint("apCrc: St\n");
+  DEBUGprint_MAP("apCrc: St\n");
 
   // Set checksum presence bit
   Data_t *header = get_header(headerOffset);
@@ -173,13 +174,13 @@ bool MAP::MAPPacket::appendChecksum(Offset_t headerOffset){
   if(MAP::get_checksumPresent(*header))
     return true;
 
-  DEBUGprint("apCrc: Crc not pres. cap %d, size %d\n", get_capacity(), get_size());
+  DEBUGprint_MAP("apCrc: Crc not pres. cap %d, size %d\n", get_capacity(), get_size());
 
   // Make sure packet has sufficient buffer capacity to store the additional 4 CRC bytes.
   if(get_availableCapacity() < ChecksumLength){
     // Attempt to increase capacity
     if(! set_availableCapacity(ChecksumLength)){
-      DEBUGprint("apCrc: Expand failed\n");
+      DEBUGprint_MAP("apCrc: Expand failed\n");
       return false;
     }
   }
@@ -202,7 +203,7 @@ bool MAP::MAPPacket::appendChecksum(Offset_t headerOffset){
     checksum = checksum >> 8;
   }
 
-  DEBUGprint("apCrc: App cmplt. New size: %d\n", get_size());
+  DEBUGprint_MAP("apCrc: App cmplt. New size: %d\n", get_size());
   return true;
 }
 

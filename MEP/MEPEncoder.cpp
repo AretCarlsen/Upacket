@@ -4,11 +4,11 @@
 
 // Begin processing a new packet
 Status::Status_t MEP::MEPEncoder::sinkPacket(MAP::MAPPacket *new_packet, MAP::MAPPacket::Offset_t headerOffset){
-  DEBUGprint("MEPe: sP st\n");
+  DEBUGprint_MEP("MEPe: sP st\n");
 
   // Busy? Then refuse to accept.
   if(isBusy()){
-    DEBUGprint("MEPe: busy, refusing\n");
+    DEBUGprint_MEP("MEPe: busy, refusing\n");
     return Status::Status__Busy;
   }
 

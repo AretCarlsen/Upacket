@@ -14,6 +14,8 @@
 
 namespace MEP {
 
+typedef uint16_t OutputBufferCapacity_t;
+
 // Encode a packet to an outgoing bytestream.
 class MEPEncoder : public MAP::MAPPacketSink, public Process {
 private:
@@ -23,7 +25,7 @@ private:
 // Current packet
   MAP::OffsetMAPPacket offsetPacket;
 // Current packet data
-  Packet::Data_t *packetData;
+  MAP::Data_t *packetData;
 
 // State machine
   StateMachine state;
@@ -31,13 +33,13 @@ private:
 
 // MEP-encoded outgoing data
 //  DataTransfer::DataSink<MEP::Data_t, Status::Status_t> *outputSink;
-  DataStore::RingBuffer<MEP::Data_t, Status::Status_t> *outputSink;
+  DataStore::RingBuffer<MEP::Data_t, OutputBufferCapacity_t> *outputSink;
 
 public:
 
 // Constructor
   //MEPEncoder(DataTransfer::DataSink<MEP::Data_t, Status::Status_t> *new_outputSink)
-  MEPEncoder(DataStore::RingBuffer<MEP::Data_t, Status::Status_t> *new_outputSink, MAP::Data_t new_controlPrefix = MEP::DefaultControlPrefix)
+  MEPEncoder(DataStore::RingBuffer<MEP::Data_t, OutputBufferCapacity_t> *new_outputSink, MAP::Data_t new_controlPrefix = MEP::DefaultControlPrefix)
   : controlPrefix(new_controlPrefix),
     offsetPacket(NULL, 0),
     controlCollisionInProgress(false),
@@ -56,7 +58,7 @@ public:
 
 // Reset the encoder.
   void reset(){
-    DEBUGprint("MEPe: rset\n");
+    DEBUGprint_MEP("MEPe: rset\n");
     STATE_MACHINE__RESET(state);
     if(offsetPacket.packet != NULL){
       MAP::dereferencePacket(offsetPacket.packet);

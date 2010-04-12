@@ -29,7 +29,7 @@ private:
 // Packet resizing increment, in bytes
   static const uint8_t PacketCapacity__Increment = 10;
 // Max allowed packet size, in bytes
-  static const uint8_t PacketCapacity__Max = 100;
+  static const uint8_t PacketCapacity__Max = 40;
 
 public:
 

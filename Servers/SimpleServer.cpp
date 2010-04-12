@@ -12,7 +12,7 @@ bool SimpleServer::prepareReply(MAP::MAPPacket **replyPacket_ptr_ptr, MAP::MAPPa
 
   MAP::MAPPacket *replyPacket;
 
-  DEBUGprint("SS:pR: try alloc pack\n");
+  DEBUGprint_SS("SS:pR: try alloc pack\n");
 
   // Attempt to allocate reply packet.
   if(! MAP::allocateNewPacket(&replyPacket, InitialReplyPacketCapacity + data_capacity))
@@ -25,7 +25,7 @@ bool SimpleServer::prepareReply(MAP::MAPPacket **replyPacket_ptr_ptr, MAP::MAPPa
       // Assume copy will fail until proven otherwise.
       successful_preparation = false;
 
-      DEBUGprint("SS:pR: cp src->dest\n");
+      DEBUGprint_SS("SS:pR: cp src->dest\n");
 
       // This implementation only supports addy types 0 to 14 (not Expanded).
       if(MAP::get_addressType(*srcHeader) > 14)
@@ -35,7 +35,7 @@ bool SimpleServer::prepareReply(MAP::MAPPacket **replyPacket_ptr_ptr, MAP::MAPPa
       if(! replyPacket->sinkExpand(MAP::DestAddressPresent_Mask | MAP::get_addressType(*srcHeader), IncrementReplyPacketCapacity))
         break;
 
-//      DEBUGprint("prepareReply: Header byte sunk.\n");
+//      DEBUGprint_SS("prepareReply: Header byte sunk.\n");
 
       // Copy src address from incoming packet to outgoing replyPacket (as dest address).
       for(MAP::Data_t *src_data_ptr = srcPacket->get_srcAddress(srcHeader); src_data_ptr < srcPacket->back(); src_data_ptr++){
@@ -53,9 +53,9 @@ bool SimpleServer::prepareReply(MAP::MAPPacket **replyPacket_ptr_ptr, MAP::MAPPa
 
   // Check for errors
       if(successful_preparation){
-        DEBUGprint("SS:pR: cmplt cp src->dest\n");
+        DEBUGprint_SS("SS:pR: cmplt cp src->dest\n");
       }else{
-        DEBUGprint("SS:pR: failed cp src->dest\n");
+        DEBUGprint_SS("SS:pR: failed cp src->dest\n");
         break;
       }
     }
@@ -63,7 +63,7 @@ bool SimpleServer::prepareReply(MAP::MAPPacket **replyPacket_ptr_ptr, MAP::MAPPa
 
 // Make sure sufficient data capacity is left available.
   if(successful_preparation && (replyPacket->get_availableCapacity() < data_capacity)){
-    DEBUGprint("SS:pR: atmpting expnsn\n");
+    DEBUGprint_SS("SS:pR: atmpting expnsn\n");
   // Abort if cannot leave sufficient data capacity available.
     if(! replyPacket->set_availableCapacity(data_capacity))
       successful_preparation = false;
@@ -71,13 +71,13 @@ bool SimpleServer::prepareReply(MAP::MAPPacket **replyPacket_ptr_ptr, MAP::MAPPa
 
   // Problems, or no src addresses found? Abort.
   if(! successful_preparation){
-    DEBUGprint("SS:pR: prep failed\n");
+    DEBUGprint_SS("SS:pR: prep failed\n");
     delete replyPacket;
     return false;
   }
 
 // Success!
-  DEBUGprint("SS:pR: prep succeed\n");
+  DEBUGprint_SS("SS:pR: prep succeed\n");
   *replyPacket_ptr_ptr = replyPacket;
   return true;
 }

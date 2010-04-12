@@ -16,7 +16,7 @@ public:
     if(offsetPacket.packet == NULL)
       return Status::Status__Good;
 
-    DEBUGprint("EchSrv: proc pack\n");
+    DEBUGprint_MISC("EchSrv: proc pack\n");
 
     MAP::MAPPacket *replyPacket;
   // Attempt to prepare a reply packet large enough to contain the received packet's contents.
@@ -36,7 +36,7 @@ public:
       packetSink->sinkPacket(replyPacket);
       MAP::dereferencePacket(replyPacket);
     }else{
-      DEBUGprint("EchSrv: reply prep fld\n");
+      DEBUGprint_MISC("EchSrv: reply prep fld\n");
     }
   // Finished with the source packet.
     finishedWithPacket();

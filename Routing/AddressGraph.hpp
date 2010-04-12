@@ -47,6 +47,11 @@ public:
   bool operator==(const AddressFilter &cmpFilter) const{
     return (memcmp(this, &cmpFilter, sizeof(cmpFilter)) == 0);
   }
+
+  uint8_t debugPrintValues(){
+    DEBUGprint("m%d i%d h%d aT%d aV%d aM%d\n", mode, packetSinkIndex, headerOffset, addressType, addressValue, addressValueMask);
+    return 0;
+  }
 };
 
 class AddressGraph : public MAP::MAPPacketSink {
@@ -57,9 +62,9 @@ private:
   DataStore::ArrayBuffer<MAPPacketSink*, uint8_t> *packetSinks;
   DataStore::DynamicArrayBuffer<AddressFilter,uint8_t> addressEdges;
 
-  static const uint8_t DefaultInitialCapacity = 3;
+  static const uint8_t DefaultInitialCapacity = 8;
   static const uint8_t DefaultCapacityIncrement = 3;
-  static const uint8_t DefaultMaxCapacity = 12;
+  static const uint8_t DefaultMaxCapacity = 15;
 
   typedef uint8_t Opcode_t;
   static const Opcode_t Opcode__Add = 1;
@@ -83,7 +88,7 @@ public:
     for(AddressFilter *filter = addressEdges.front(); filter < addressEdges.back(); filter++){
   // Check for an existing edge that matches exactly
       if(*filter == newEdge){
-        DEBUGprint("AG: edge sink fld (exists)\n");
+        DEBUGprint_MISC("AG: edge sink fld (exists)\n");
         return true;
       }
   // Check for an existing edge that is inactive
@@ -108,5 +113,7 @@ public:
   void process_command_packet(MAP::MAPPacket* const packet, MAP::MAPPacket::Offset_t headerOffset);
   void command_add(MAP::MAPPacket* const packet, MAP::Data_t *data_ptr);
   void command_remove(MAP::MAPPacket* const packet, MAP::Data_t *data_ptr);
+
+  friend class EepromAddressGraph;
 };
 

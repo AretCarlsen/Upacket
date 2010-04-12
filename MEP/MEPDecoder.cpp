@@ -9,7 +9,7 @@ Status::Status_t MEP::MEPDecoder::sinkData(const MEP::Data_t &data){
 
 // Start a new packet, if necessary.
   if(packet == NULL){
-    DEBUGprint("MEPd: new pack\n");
+    DEBUGprint_MEP("MEPd: new pack\n");
   // Attempt to allocate a new packet.
     if(! allocateNewPacket())
       return Status::Status__Busy;
@@ -37,13 +37,13 @@ STATE_MACHINE__BEGIN(state);
   // the control byte as data (followed by the new byte).
   if((data & MEP::PrefixMask) != controlPrefix){
     // Attempt to enlarge packet, if necessary
-    if( (packet->get_availableCapacity() < 2) && (!expandPacketCapacity()) ) 
-      return Status::Status__Busy;
+//    if( (packet->get_availableCapacity() < 2) && (!expandPacketCapacity()) ) 
+//      return Status::Status__Busy;
 
     // First, append the control byte itself as (delayed) data.
-    packet->sinkExpand(controlPrefix, PacketCapacity__Increment, PacketCapacity__Max);
+    if(! packet->sinkExpand(controlPrefix, PacketCapacity__Increment, PacketCapacity__Max)) return Status::Status__Busy;
     // Then, append the data itsef.
-    packet->sinkExpand(data, PacketCapacity__Increment, PacketCapacity__Max);
+    if(! packet->sinkExpand(data, PacketCapacity__Increment, PacketCapacity__Max)) return Status::Status__Busy;
 
     // Return to data incoming state
     STATE_MACHINE__RESET(state);
@@ -58,13 +58,13 @@ STATE_MACHINE__BEGIN(state);
   // Does the opcode indicate to send the control prefix as data?
   if(opcode == MEP::Opcode__SendControlPrefixAsData){
     // Attempt to enlarge packet, if necessary
-    if( packet->is_full() && (!expandPacketCapacity()) ) 
-      return Status::Status__Busy;
-    packet->sinkExpand(controlPrefix, PacketCapacity__Increment, PacketCapacity__Max);
+//    if( packet->is_full() && (!expandPacketCapacity()) ) 
+//      return Status::Status__Busy;
+    if(! packet->sinkExpand(controlPrefix, PacketCapacity__Increment, PacketCapacity__Max)) return Status::Status__Busy;
 
   // Does the opcode indicate a complete packet?
   }else if(opcode == MEP::Opcode__CompletePacket){
-    DEBUGprint("MEPd: pack cmplt, size %d\n", packet->get_size());
+    DEBUGprint_MEP("MEPd: pack cmplt, size %d\n", packet->get_size());
 
     // Sink completed packet
     packetSink->sinkPacket(packet);
