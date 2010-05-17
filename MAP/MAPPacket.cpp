@@ -1,9 +1,13 @@
+// Copyright (C) 2010, Aret N Carlsen (aretcarlsen@autonomoustools.com).
+// MAP packet handling (C++).
+// Licensed under GPLv3 and later versions. See license.txt or <http://www.gnu.org/licenses/>.
+
 
 #include "MAP.hpp"
 #include "../PosixCRC32ChecksumEngine/PosixCRC32ChecksumEngine.hpp"
 
 // Sink a numeric value in C78-encoded big-endian format.
-bool MAP::MAPPacket::sinkC78(const uint32_t value, const uint8_t capacity_increment, const uint8_t capacity_limit){
+bool MAP::MAPPacket::sinkC78(const uint32_t value, const Capacity_t capacity_increment, const Capacity_t capacity_limit){
   // Calculate extra C78 bytes required (before concluding byte, with its 0 MSb).
   // Will need an extra byte for each log (base 2^7) increment.
   uint8_t extraBytes = 0;
@@ -43,13 +47,38 @@ bool MAP::MAPPacket::sourceC78(uint32_t &value, Data_t*& data_ptr){
   return (data_ptr < back());
 }
 
+// Source a C78String (C78 pascal encoding).
+// If the C78 prefix is invalid or the value is greater than max_len, read_len will be set to 0 and false returned.
+// If the C78 prefix is 0, read_len will be set to 0 and true returned.
+// If the C78 prefix is valid, and the complete string is sourced, read_len will be equal to the string length and true returned.
+// If the C78 prefix is valid, but the complete string is not present (because the packet is not long enough), read_len will be
+// set to the string portion that was available and false returned.
+bool MAP::MAPPacket::sourceC78String(Data_t *strBuf, Capacity_t &read_len, Capacity_t max_len, Data_t*& data_ptr){
+  read_len = 0;
+  uint32_t strLen;
+// Source C78 (and sanity checks)
+  if(! (sourceC78(strLen, data_ptr) && (strLen <= max_len))) return false;
+  data_ptr++;
+
+  Data_t *packetBack = back();
+// Source string itself
+  for(; strLen > 0; strLen--){
+    if(data_ptr > packetBack) return false;
+    *strBuf = *data_ptr;
+    strBuf++; data_ptr++;
+    read_len++;
+  }
+
+  return true;
+}
+
 // Validate a MAP packet.
 //
 // If the require_checksum argument is true, then the packet must contain a (valid) checksum
 // in the outermost encapsulation to be considered valid.
 // If the remove_checksums argument is true, then any checksums present will be removed
 // once validated. (Note that the process aborts after encountering the first packet error.)
-bool MAP::MAPPacket::validate(Offset_t headerOffset, bool require_checksum, bool remove_checksums){
+bool MAP::MAPPacket::validate(HeaderOffset_t headerOffset, bool require_checksum, bool remove_checksums){
 // Make sure packet includes at least an initial header
 // Make sure packet includes an outermost checksum, if requested.
   Data_t* header = get_header(headerOffset);
@@ -161,18 +190,16 @@ bool MAP::MAPPacket::validateChecksum(const Data_t* data_ptr, const Data_t* stop
 // Eventually, this should be broken out into a function that takes a stop_ptr
 // to allow callers to append checksums to sub-packets. Would require a little
 // footwork to move data after the stop_ptr out to provide for the CRC bytes.
-bool MAP::MAPPacket::appendChecksum(Offset_t headerOffset){
+bool MAP::MAPPacket::appendChecksum(HeaderOffset_t headerOffset){
   DEBUGprint_MAP("apCrc: St\n");
 
-  // Set checksum presence bit
-  Data_t *header = get_header(headerOffset);
-
 // Packet must have at least one byte.
-  if(header == NULL) return false;
+  if(is_empty()) return false;
 
-  // Check if packet already contains checksum
-  if(MAP::get_checksumPresent(*header))
-    return true;
+
+  // Check if packet already contains checksum (or at least indicates so in header).
+  Data_t *header = get_header(headerOffset);
+  if(MAP::get_checksumPresent(*header)) return true;
 
   DEBUGprint_MAP("apCrc: Crc not pres. cap %d, size %d\n", get_capacity(), get_size());
 
@@ -183,6 +210,10 @@ bool MAP::MAPPacket::appendChecksum(Offset_t headerOffset){
       DEBUGprint_MAP("apCrc: Expand failed\n");
       return false;
     }
+// Pointers are now invalid
+    header = get_header(headerOffset);
+// Overly cautious.
+    if(header == NULL) return false;
   }
 
   *header = MAP::set_checksumPresent(*header, true);
@@ -197,8 +228,8 @@ bool MAP::MAPPacket::appendChecksum(Offset_t headerOffset){
   Checksum_t checksum = checksumEngine.getChecksum();
   // Append checksum
   for(uint8_t i = 4; i > 0; i--){
-   // Append byte
-    append(checksum & 0xFF);
+   // Append byte. Could use append() here, since already verified capacity, but being cautious.
+    sinkData(checksum & 0xFF);
   // Next checksum byte.
     checksum = checksum >> 8;
   }

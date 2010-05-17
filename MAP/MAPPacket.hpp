@@ -1,3 +1,6 @@
+// Copyright (C) 2010, Aret N Carlsen (aretcarlsen@autonomoustools.com).
+// MAP packet handling (C++).
+// Licensed under GPLv3 and later versions. See license.txt or <http://www.gnu.org/licenses/>.
 
 namespace MAP {
 
@@ -11,43 +14,42 @@ namespace MAP {
 #define PACKET_CAPACITY_T uint16_t
 class MAPPacket : public DataStore::DynamicArrayBuffer<Data_t, PACKET_CAPACITY_T> {
   // Current status
-  Status::Status_t status;
-
-  // Reference count (for garbage collection)
-  uint8_t referenceCount;
+//  Status::Status_t status;
 
 public:
   typedef PACKET_CAPACITY_T Capacity_t;
-
-  typedef uint8_t Offset_t;
+// Header offset
+  typedef uint8_t HeaderOffset_t;
+  typedef uint8_t ReferenceCount_t;
 
 private:
-  Capacity_t dataOffset;
+  // Reference count (for garbage collection)
+  ReferenceCount_t referenceCount;
 
 public:
 
-  MAPPacket()
-  : status(Status::Status__Complete),
-    referenceCount(0),
-    dataOffset(0)
+  MAPPacket(MemoryPool *new_memoryPool)
+  : DataStore::DynamicArrayBuffer<Data_t,Capacity_t>(new_memoryPool),
+    referenceCount(0)
   { }
 
 // Set the current packet status
-  void sinkStatus(const Status::Status_t &new_status){
-    status = new_status;
+  inline void sinkStatus(const Status::Status_t &new_status){
+//    status = new_status;
   }
 
   static const Capacity_t DefaultCapacityLimit = 50;
 
 // Append a data byte to a packet, expanding the packet's capacity if necessary.
-  inline bool sinkExpand(Data_t data, const uint8_t capacity_increment = 1, const uint8_t capacity_limit = DefaultCapacityLimit){
+  inline bool sinkExpand(Data_t data, const Capacity_t capacity_increment = 1, const Capacity_t capacity_limit = DefaultCapacityLimit){
     return DataStore::DynamicArrayBuffer<Data_t,Capacity_t>::sinkExpand(data, capacity_increment, capacity_limit);
   }
 
-  inline uint8_t incrementReferenceCount(){
+// This will fail spectacularly on overflow.
+  inline ReferenceCount_t incrementReferenceCount(){
     return ++referenceCount;
   }
-  inline uint8_t decrementReferenceCount(){
+  inline ReferenceCount_t decrementReferenceCount(){
     if(referenceCount == 0)
       return 0;
     else
@@ -58,7 +60,7 @@ public:
     return front();
   }
 
-  inline Data_t* get_header(Offset_t headerOffset){
+  inline Data_t* get_header(HeaderOffset_t headerOffset){
     Data_t *header_ptr = get_first_header();
     for(; headerOffset > 0; headerOffset--)
       header_ptr = get_next_header(header_ptr);
@@ -73,7 +75,7 @@ public:
 */
 
 // Bypass a C78 field
-  Data_t* c78Pass(Data_t* data_ptr) const{
+  inline Data_t* c78Pass(Data_t* data_ptr) const{
   // Sanity checks
     if(data_ptr == NULL || data_ptr >= back())
       return NULL;
@@ -94,7 +96,7 @@ public:
 
 // Bypass the next-proto field, if present.
 // Returns NULL if it cannot return a valid address.
-  Data_t* bypass_nextProto(const Data_t* const header, Data_t* data_ptr) const{
+  inline Data_t* bypass_nextProto(const Data_t* const header, Data_t* data_ptr) const{
     // Step past src address, if present.
     if(MAP::get_nextProtoPresent(*header))
       return c78Pass(data_ptr);
@@ -103,7 +105,7 @@ public:
   }
 // Bypass the dest address field, if present.
 // Returns NULL if it cannot return a valid address.
-  Data_t* bypass_destAddress(const Data_t* const header, Data_t* data_ptr) const{
+  inline Data_t* bypass_destAddress(const Data_t* const header, Data_t* data_ptr) const{
     // Step past src address, if present.
     if(MAP::get_destAddressPresent(*header))
       return c78Pass(data_ptr);
@@ -112,7 +114,7 @@ public:
   }
 // Bypass the src address field, if present.
 // Returns NULL if it cannot return a valid address.
-  Data_t* bypass_srcAddress(const Data_t* const header, Data_t* data_ptr) const{
+  inline Data_t* bypass_srcAddress(const Data_t* const header, Data_t* data_ptr) const{
     // Step past src address, if present.
     if(MAP::get_srcAddressPresent(*header))
       return c78Pass(data_ptr);
@@ -121,7 +123,7 @@ public:
   }
 
 // Get a pointer to the next-proto field.
-  Data_t* get_nextProto(Data_t* const header) const{
+  inline Data_t* get_nextProto(Data_t* const header) const{
   // Sanity check
     if(! MAP::get_nextProtoPresent(*header))
       return NULL;
@@ -130,7 +132,7 @@ public:
     return (header + 1 > back())? NULL : header + 1;
   }
 // Get a pointer to the dest-address field.
-  Data_t* get_destAddress(Data_t* const header) const{
+  inline Data_t* get_destAddress(Data_t* const header) const{
   // Sanity check
     if(! MAP::get_destAddressPresent(*header))
       return NULL;
@@ -139,7 +141,7 @@ public:
     return bypass_nextProto(header, header + 1);
   }
 // Get a pointer to the src-address field.
-  Data_t* get_srcAddress(Data_t* const header) const{
+  inline Data_t* get_srcAddress(Data_t* const header) const{
   // Sanity check
     if(! MAP::get_srcAddressPresent(*header))
       return NULL;
@@ -148,13 +150,13 @@ public:
     return bypass_destAddress(header, bypass_nextProto(header, header + 1));
   }
 // Get a pointer to the packet contents (everything after headers).
-  Data_t* get_contents(Data_t* const header) const{
+  inline Data_t* get_contents(Data_t* const header) const{
   // Begin at first byte after header (header + 1). Bypass next-proto, dest-address, and src-address.
     return bypass_srcAddress( header, bypass_destAddress(header, bypass_nextProto(header, header + 1)) );
   }
 // Get the next header, if any.
 // Returns NULL if the next-proto is not MAP.
-  Data_t* get_next_header(Data_t* const header){
+  inline Data_t* get_next_header(Data_t* const header){
   // Make sure next-proto is MAP.
     Data_t* data_ptr = get_nextProto(header);
     if(data_ptr == NULL || *data_ptr != MAP::Protocol__MAP)
@@ -166,7 +168,7 @@ public:
   }
 
 // Step through headers until reach a non-MAP encapsulated packet.
-  Data_t* get_data(Data_t* header){
+  inline Data_t* get_data(Data_t* header){
     // Search for next header (if any).
     // Stop when no further non-MAP headers accessible.
     for(Data_t* data_ptr = get_next_header(header); data_ptr != NULL; data_ptr = get_next_header(header)){
@@ -177,7 +179,7 @@ public:
     return get_contents(header);
   }
 // Get the first non-MAP packet contents.
-  Data_t* get_data(Offset_t headerOffset){
+  inline Data_t* get_data(HeaderOffset_t headerOffset){
     return get_data(get_header(headerOffset));
   }
 
@@ -187,7 +189,7 @@ public:
 // in the outermost encapsulation to be considered valid.
 // If the remove_checksums argument is true, then any checksums present will be removed
 // once validated.
-  bool validate(Offset_t headerOffset = 0, const bool require_checksum = false, const bool remove_checksums = true);
+  bool validate(HeaderOffset_t headerOffset = 0, const bool require_checksum = false, const bool remove_checksums = true);
 
 // Validate a checksum from the header at data_ptr to the end of the checksum
 // just before stop_ptr.
@@ -197,11 +199,24 @@ public:
 //
 // Returns true if the packet already contained a checksum or a checksum has been successfully appended.
 // False otherwise (e.g. if unable to append sufficient memory).
-  bool appendChecksum(Offset_t headerOffset = 0);
+  bool appendChecksum(HeaderOffset_t headerOffset = 0);
+
+// Source a boolean value.
+  inline bool sourceBool(bool &value, Data_t*& data_ptr){
+// Sanity check on data.
+    if(data_ptr == NULL || data_ptr >= back())
+      return false;
+    value = (*data_ptr != 0);
+    return true;
+  }
+// Sink a boolean value.
+  inline bool sinkBool(const bool value, const Capacity_t capacity_increment = 1, const Capacity_t capacity_limit = DefaultCapacityLimit){
+    return sinkExpand(value? 1:0, capacity_increment, capacity_limit);
+  }
 
 // C78-sink a numeric value
-  bool sinkC78(const uint32_t value, const uint8_t capacity_increment = 1, const uint8_t capacity_limit = DefaultCapacityLimit);
-  bool sinkC78Signed(const int32_t value, const uint8_t capacity_increment = 1, const uint8_t capacity_limit = DefaultCapacityLimit){
+  bool sinkC78(const uint32_t value, const Capacity_t capacity_increment = 1, const Capacity_t capacity_limit = DefaultCapacityLimit);
+  inline bool sinkC78Signed(const int32_t value, const Capacity_t capacity_increment = 1, const Capacity_t capacity_limit = DefaultCapacityLimit){
     uint32_t unsigned_value;
     if(value < 0)  // Handle negative values specially.
       unsigned_value = (-(value+1) << 1) | 0x01;  // Add one to account for -0.
@@ -213,7 +228,7 @@ public:
 // Source a C78-encoded big-endian numeric value.
   //  template <typename IntType_t>
   bool sourceC78(uint32_t &value, Data_t*& data_ptr);
-  bool sourceC78Signed(int32_t &value, Data_t*& data_ptr){
+  inline bool sourceC78Signed(int32_t &value, Data_t*& data_ptr){
     uint32_t unsigned_value;
     if(! sourceC78(unsigned_value, data_ptr)) return false;
     if(unsigned_value & 0x01)  // Handle negative values
@@ -222,6 +237,8 @@ public:
       value = unsigned_value >> 1;  // The MSb 
     return true;
   }
+
+  bool sourceC78String(Data_t *strBuf, Capacity_t &read_len, Capacity_t max_len, Data_t*& data_ptr);
 };
 
 

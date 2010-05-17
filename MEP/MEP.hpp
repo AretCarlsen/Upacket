@@ -1,3 +1,7 @@
+// Copyright (C) 2010, Aret N Carlsen (aretcarlsen@autonomoustools.com).
+// MEP packet handling (C++).
+// Licensed under GPLv3 and later versions. See license.txt or <http://www.gnu.org/licenses/>.
+
 // MEP (Micro Encapsulation Protocol) definitions
 //
 // The Micro Encapsulation Protocol encodes an endless series of packets over a raw serial data stream..

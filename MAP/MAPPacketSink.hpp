@@ -1,18 +1,22 @@
+// Copyright (C) 2010, Aret N Carlsen (aretcarlsen@autonomoustools.com).
+// MAP packet handling (C++).
+// Licensed under GPLv3 and later versions. See license.txt or <http://www.gnu.org/licenses/>.
+
 
 namespace MAP {
 
 class MAPPacketSink {
 public:
   // HeaderOffset limited to 256, obviously.
-  virtual Status::Status_t sinkPacket(MAPPacket *packet, MAPPacket::Offset_t headerOffset = 0) = 0;
+  virtual Status::Status_t sinkPacket(MAPPacket *packet, MAPPacket::HeaderOffset_t headerOffset = 0) = 0;
 };
 
 class OffsetMAPPacket {
 public:
   MAPPacket *packet;
-  MAPPacket::Offset_t headerOffset;
+  MAPPacket::HeaderOffset_t headerOffset;
 
-  OffsetMAPPacket(MAPPacket *new_packet = NULL, MAPPacket::Offset_t new_headerOffset = 0)
+  OffsetMAPPacket(MAPPacket *new_packet = NULL, MAPPacket::HeaderOffset_t new_headerOffset = 0)
   : packet(new_packet), headerOffset(new_headerOffset)
   { }
 };
@@ -29,7 +33,7 @@ public:
     packetSink(new_packetSink)
   { }
 
-  Status::Status_t sinkPacket(MAPPacket* const packet, MAPPacket::Offset_t headerOffset){
+  Status::Status_t sinkPacket(MAPPacket* const packet, MAPPacket::HeaderOffset_t headerOffset){
   // If the packet buffer is empty, try to sink the packet immediately.
     if(packetBuffer.is_empty()){
     // Try to sink the packet

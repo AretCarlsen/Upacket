@@ -1,3 +1,8 @@
+// Copyright (C) 2010, Aret N Carlsen (aretcarlsen@autonomoustools.com).
+// Dynamic routing handlers (C++).
+// Licensed under GPLv3 and later versions. See license.txt or <http://www.gnu.org/licenses/>.
+
+
 #pragma once
 
 #include "../globals.hpp"
@@ -24,7 +29,7 @@ public:
   uint8_t packetSinkIndex;
 
   // Header offset (for encapsulation/nesting)
-  MAP::MAPPacket::Offset_t headerOffset;
+  MAP::MAPPacket::HeaderOffset_t headerOffset;
 
  // This implementation supports only types and values less than 128.
   // Type
@@ -62,9 +67,9 @@ private:
   DataStore::ArrayBuffer<MAPPacketSink*, uint8_t> *packetSinks;
   DataStore::DynamicArrayBuffer<AddressFilter,uint8_t> addressEdges;
 
-  static const uint8_t DefaultInitialCapacity = 8;
-  static const uint8_t DefaultCapacityIncrement = 3;
-  static const uint8_t DefaultMaxCapacity = 15;
+  static const uint8_t DefaultInitialCapacity = 0;
+  static const uint8_t DefaultCapacityIncrement = 4;
+  static const uint8_t DefaultMaxCapacity = 16;
 
   typedef uint8_t Opcode_t;
   static const Opcode_t Opcode__Add = 1;
@@ -73,32 +78,41 @@ private:
 
 public:
 
+// HEAP
   AddressGraph(uint8_t new_localAddressType, uint8_t new_localAddressValue, 
                DataStore::ArrayBuffer<MAPPacketSink*, uint8_t> *new_packetSinks,
-               uint8_t initial_capacity = DefaultInitialCapacity)
+               MemoryPool *new_memoryPool, uint8_t initial_capacity = DefaultInitialCapacity)
   : localAddressType(new_localAddressType), localAddressValue(new_localAddressValue),
     packetSinks(new_packetSinks),
-    addressEdges(initial_capacity)
-  { }
+    addressEdges(new_memoryPool, initial_capacity)
+  {
+    assert(new_packetSinks != NULL);
+    assert(new_memoryPool != NULL);
+  }
 
-  Status::Status_t sinkPacket(MAP::MAPPacket* const packet, MAP::MAPPacket::Offset_t headerOffset);
+  Status::Status_t sinkPacket(MAP::MAPPacket* const packet, MAP::MAPPacket::HeaderOffset_t headerOffset);
 
   // Note that edge is copied by value.
   bool sinkEdge(const AddressFilter &newEdge){
+    DEBUGprint_RARE("AG: edge sink: ");
     for(AddressFilter *filter = addressEdges.front(); filter < addressEdges.back(); filter++){
+      DEBUG_AG(filter->debugPrintValues());
   // Check for an existing edge that matches exactly
       if(*filter == newEdge){
-        DEBUGprint_MISC("AG: edge sink fld (exists)\n");
+        DEBUGprint_RARE("fld (exists)\n");
         return true;
       }
   // Check for an existing edge that is inactive
       if(filter->mode == AddressFilter::Mode__Inactive){
-        filter = filter;
+        DEBUGprint_RARE("scs (rplc)\n");
+        *filter = newEdge;
         return true;
       }
     }
 
-    return addressEdges.sinkExpand(newEdge, DefaultCapacityIncrement, DefaultMaxCapacity);
+    bool skExp = addressEdges.sinkExpand(newEdge, DefaultCapacityIncrement, DefaultMaxCapacity);
+    DEBUGprint_RARE("skExp: %d\n", (skExp? 1 : 0));
+    return skExp;
   }
 
   void removeEdge(AddressFilter &edge){
@@ -110,7 +124,7 @@ public:
     addressEdges.set_size(0);
   }
   
-  void process_command_packet(MAP::MAPPacket* const packet, MAP::MAPPacket::Offset_t headerOffset);
+  void process_command_packet(MAP::MAPPacket* const packet, MAP::MAPPacket::HeaderOffset_t headerOffset);
   void command_add(MAP::MAPPacket* const packet, MAP::Data_t *data_ptr);
   void command_remove(MAP::MAPPacket* const packet, MAP::Data_t *data_ptr);
 

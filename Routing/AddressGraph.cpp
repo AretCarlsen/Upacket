@@ -1,3 +1,7 @@
+// Copyright (C) 2010, Aret N Carlsen (aretcarlsen@autonomoustools.com).
+// Dynamic routing handlers (C++).
+// Licensed under GPLv3 and later versions. See license.txt or <http://www.gnu.org/licenses/>.
+
 
 #include "AddressGraph.hpp"
 
@@ -30,45 +34,43 @@ bool AddressFilter::isMatch(const uint8_t cmp_addressType, uint8_t* cmp_addressV
 }
 
 // Is processed immediately.
-Status::Status_t AddressGraph::sinkPacket(MAP::MAPPacket* const packet, uint8_t headerOffset){
+Status::Status_t AddressGraph::sinkPacket(MAP::MAPPacket* const packet, MAP::MAPPacket::HeaderOffset_t headerOffset){
 //  DEBUGprint_AG("AG::sP: Pack size %d, hO %d.\n", packet->get_size(), headerOffset);
   MAP::Data_t *header = packet->get_header(headerOffset);
-//  DEBUGprint_AG("D 0\n");
-  if(header == NULL){
+
+  if(header == NULL)
     return Status::Status__Bad;
-  }
 
   MAP::Data_t destAddressType = MAP::get_addressType(*header);
   MAP::Data_t *destAddressValue = packet->get_destAddress(header);
-  if(destAddressValue == NULL){
+  if(destAddressValue == NULL)
     return Status::Status__Bad;
-  }
 
+  // Reference, in case receiver derefs
+  MAP::referencePacket(packet);
   if(destAddressType != MAP::AddressType__Topic){
     DEBUGprint_AG("AG::sP: pack addy X%x/X%x\n", destAddressType, *destAddressValue, localAddressType, localAddressValue);
   }
   if((destAddressType == localAddressType) && (*destAddressValue == localAddressValue)){
-    DEBUGprint_AG("AG::sP: cmd packet match\n");
+    DEBUGprint_RARE("AG::sP: cmd packet match\n");
     process_command_packet(packet, headerOffset);
-  // Stop processing, to avoid loops.
-    return Status::Status__Good;
-  }
-
-  // Reference, in case receiver derefs
-  MAP::referencePacket(packet);
-  for(AddressFilter *edge = addressEdges.front(); edge < addressEdges.back(); edge++){
-    if(edge->isMatch(destAddressType, destAddressValue) && (edge->packetSinkIndex < packetSinks->get_size())){
-      DEBUGprint_AG("AG::sP: acc: i%d h%d\n", edge->packetSinkIndex, edge->headerOffset);
-      packetSinks->get(edge->packetSinkIndex)->sinkPacket(packet, headerOffset + edge->headerOffset);
+    // Stop processing, to avoid loops.
+  }else{
+    for(AddressFilter *edge = addressEdges.front(); edge < addressEdges.back(); edge++){
+      if(edge->isMatch(destAddressType, destAddressValue) && (edge->packetSinkIndex < packetSinks->get_size())){
+        DEBUGprint_AG("AG::sP: acc: i%d h%d\n", edge->packetSinkIndex, edge->headerOffset);
+        packetSinks->get(edge->packetSinkIndex)->sinkPacket(packet, headerOffset + edge->headerOffset);
+      }
     }
   }
-  MAP::dereferencePacket(packet);
 
+  // Dereference
+  MAP::dereferencePacket(packet);
   return Status::Status__Good;
 }
 
 void AddressGraph::command_add(MAP::MAPPacket* const packet, MAP::Data_t *data_ptr){
-  DEBUGprint_MISC("cmd_add() st\n");
+  DEBUGprint_RARE("cmd_add() st\n");
   AddressFilter newEdge;
 
   // Read sinkIndex
@@ -194,7 +196,7 @@ void AddressGraph::command_remove(MAP::MAPPacket* const packet, MAP::Data_t *dat
   return;
 }
 
-void AddressGraph::process_command_packet(MAP::MAPPacket* const packet, MAP::MAPPacket::Offset_t headerOffset){
+void AddressGraph::process_command_packet(MAP::MAPPacket* const packet, MAP::MAPPacket::HeaderOffset_t headerOffset){
   MAP::Data_t *data_ptr = packet->get_data(packet->get_header(headerOffset));
   if(data_ptr == NULL) return;
 

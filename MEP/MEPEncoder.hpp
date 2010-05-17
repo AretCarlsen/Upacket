@@ -1,3 +1,7 @@
+// Copyright (C) 2010, Aret N Carlsen (aretcarlsen@autonomoustools.com).
+// MEP packet handling (C++).
+// Licensed under GPLv3 and later versions. See license.txt or <http://www.gnu.org/licenses/>.
+
 // MEPEncoder class declaration
 
 #pragma once
@@ -6,7 +10,7 @@
 #include "../MAP/MAP.hpp"
 #include "../../StateMachine/StateMachine.hpp"
 #include "../../DataTransfer/DataTransfer.hpp"
-#include "../../Process/Process.hpp"
+#include "../../TimedScheduler/TimedScheduler.hpp"
 
 #ifndef NULL
 #define NULL 0
@@ -14,7 +18,7 @@
 
 namespace MEP {
 
-typedef uint16_t OutputBufferCapacity_t;
+typedef uint8_t OutputBufferCapacity_t;
 
 // Encode a packet to an outgoing bytestream.
 class MEPEncoder : public MAP::MAPPacketSink, public Process {
@@ -48,10 +52,9 @@ public:
     STATE_MACHINE__RESET(state);
   }
 
-
 // Accept a packet to be encoded.
 // Non-blocking. May return Good, Busy, or Bad (rejected).
-  Status::Status_t sinkPacket(MAP::MAPPacket* const new_packet, MAP::MAPPacket::Offset_t headerOffset);
+  Status::Status_t sinkPacket(MAP::MAPPacket* const new_packet, MAP::MAPPacket::HeaderOffset_t headerOffset);
 
 // Continue encoding the packet.
   Status::Status_t process();

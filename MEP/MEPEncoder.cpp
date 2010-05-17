@@ -1,9 +1,13 @@
+// Copyright (C) 2010, Aret N Carlsen (aretcarlsen@autonomoustools.com).
+// MEP packet handling (C++).
+// Licensed under GPLv3 and later versions. See license.txt or <http://www.gnu.org/licenses/>.
+
 // MEPEncoder class definition
 
 #include "MEPEncoder.hpp"
 
 // Begin processing a new packet
-Status::Status_t MEP::MEPEncoder::sinkPacket(MAP::MAPPacket *new_packet, MAP::MAPPacket::Offset_t headerOffset){
+Status::Status_t MEP::MEPEncoder::sinkPacket(MAP::MAPPacket *new_packet, MAP::MAPPacket::HeaderOffset_t headerOffset){
   DEBUGprint_MEP("MEPe: sP st\n");
 
   // Busy? Then refuse to accept.
@@ -40,7 +44,7 @@ STATE_MACHINE__BEGIN(state);
   packetData = offsetPacket.packet->get_header(offsetPacket.headerOffset);
 
 // Checkpoint: Transmitting data.
-STATE_MACHINE__CHECKPOINT(state);
+STATE_MACHINE__AUTOCHECKPOINT(state);
 
     // Comparison is a little shifty...
   while(packetData < offsetPacket.packet->back()){
@@ -71,7 +75,7 @@ STATE_MACHINE__CHECKPOINT(state);
   }
 
 // Unnecessary Checkpoint: Data transmission complete, about to end packet
-STATE_MACHINE__CHECKPOINT(state);
+STATE_MACHINE__AUTOCHECKPOINT(state);
 
   // Resolve any pending control collision.
   if(controlCollisionInProgress){
@@ -83,14 +87,14 @@ STATE_MACHINE__CHECKPOINT(state);
   }
 
 // Unnecessary Checkpoint: Any control collisions resolved.
-STATE_MACHINE__CHECKPOINT(state);
+STATE_MACHINE__AUTOCHECKPOINT(state);
 
   // Sink control prefix
   if(outputSink->sinkData(controlPrefix) != Status::Status__Good)
     return Status::Status__Good;
 
 // Checkpoint: Control byte sent, preparing to send end packet
-STATE_MACHINE__CHECKPOINT(state);
+STATE_MACHINE__AUTOCHECKPOINT(state);
 
   // Attempt to send end packet
   if(outputSink->sinkData(controlPrefix | MEP::Opcode__CompletePacket) != Status::Status__Good)

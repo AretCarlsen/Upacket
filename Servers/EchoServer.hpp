@@ -1,14 +1,18 @@
+// Copyright (C) 2010, Aret N Carlsen (aretcarlsen@autonomoustools.com).
+// Fundamental MAP servers (C++).
+// Licensed under GPLv3 and later versions. See license.txt or <http://www.gnu.org/licenses/>.
+
 
 #include "SimpleServer.hpp"
 
 class EchoServer : public SimpleServer, public Process {
-  MAPPacketSink *packetSink;
-
 public:
 
-  EchoServer(MAPPacketSink *new_packetSink)
-  : packetSink(new_packetSink)
-  { }
+  EchoServer(MAPPacketSink *new_packetSink, MemoryPool *new_memoryPool)
+  : SimpleServer(new_memoryPool, new_packetSink)
+  {
+    assert(new_memoryPool != NULL);
+  }
 
 // Assumes the packet has been validated!!
   Status::Status_t process(){
@@ -32,9 +36,7 @@ public:
         replyPacket->sinkData(*data_ptr);
 
   // Send the packet on its way.
-      MAP::referencePacket(replyPacket);
-      packetSink->sinkPacket(replyPacket);
-      MAP::dereferencePacket(replyPacket);
+      sendPacket(replyPacket);
     }else{
       DEBUGprint_MISC("EchSrv: reply prep fld\n");
     }

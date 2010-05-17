@@ -1,3 +1,7 @@
+// Copyright (C) 2010, Aret N Carlsen (aretcarlsen@autonomoustools.com).
+// Fundamental MAP servers (C++).
+// Licensed under GPLv3 and later versions. See license.txt or <http://www.gnu.org/licenses/>.
+
 
 #include "SimpleServer.hpp"
 
@@ -15,7 +19,7 @@ bool SimpleServer::prepareReply(MAP::MAPPacket **replyPacket_ptr_ptr, MAP::MAPPa
   DEBUGprint_SS("SS:pR: try alloc pack\n");
 
   // Attempt to allocate reply packet.
-  if(! MAP::allocateNewPacket(&replyPacket, InitialReplyPacketCapacity + data_capacity))
+  if(! allocateNewPacket(&replyPacket, InitialReplyPacketCapacity + data_capacity))
     return false;
 
   // Step through headers. Stop at actual data (after last MAP headers), when get_next_header returns NULL.
@@ -80,5 +84,45 @@ bool SimpleServer::prepareReply(MAP::MAPPacket **replyPacket_ptr_ptr, MAP::MAPPa
   DEBUGprint_SS("SS:pR: prep succeed\n");
   *replyPacket_ptr_ptr = replyPacket;
   return true;
+}
+
+// Prepare a boolean reply packet.
+// Packet contains a single byte, 1 for true, 0 for false.
+bool SimpleServer::replyBoolean(bool value){
+  // Attempt to prepare reply packet and sink the single content byte.
+  MAP::MAPPacket *replyPacket;
+  if(! SimpleServer::prepareReply(&replyPacket, offsetPacket.packet, sizeof(bool))) return false;
+  if(! replyPacket->sinkBool(value)){ MAP::dereferencePacket(replyPacket); return false; }
+  // Reference and transmit the packet.
+  return sendPacket(replyPacket);
+}
+
+// Prepare a Code78 reply packet.
+// Packet contains a variable number of bytes, based on the numeric value given.
+bool SimpleServer::replyC78(uint32_t value){
+  // Attempt to prepare reply packet (if memory available etc).
+  MAP::MAPPacket *replyPacket;
+  // Educated guess as to C78 size.
+  if(! SimpleServer::prepareReply(&replyPacket, offsetPacket.packet, sizeof(uint32_t))) return false;
+  if(! replyPacket->sinkC78(value)){ MAP::dereferencePacket(replyPacket); return false; }
+  // Reference and transmit packet.
+  return sendPacket(replyPacket);
+}
+
+bool SimpleServer::replyC78String(uint8_t* const buf, uint16_t buf_len){
+  // Attempt to prepare reply packet (if memory available etc).
+  MAP::MAPPacket *replyPacket;
+
+  // Sink string length in C78. Educated guess as to C78 size.
+  if(! SimpleServer::prepareReply(&replyPacket, offsetPacket.packet, 1 + buf_len)) return false;
+  if(! replyPacket->sinkC78(buf_len)){ MAP::dereferencePacket(replyPacket); return false; }
+
+  // Sink string itself
+  for(; buf_len > 0; buf_len--){
+    if(! replyPacket->sinkData(*buf)){ MAP::dereferencePacket(replyPacket); return false; }
+  }
+
+  // Reference and transmit packet.
+  return sendPacket(replyPacket);
 }
 

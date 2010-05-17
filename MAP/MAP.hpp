@@ -1,3 +1,8 @@
+// Copyright (C) 2010, Aret N Carlsen (aretcarlsen@autonomoustools.com).
+// MAP packet handling (C++).
+// Licensed under GPLv3 and later versions. See license.txt or <http://www.gnu.org/licenses/>.
+
+
 // Micro Address Protocol declarations and definitions
 //
 // Includes protocol-related definitions, header byte manipulation functions,
@@ -13,7 +18,7 @@
 #include "../../Status/Status.hpp"
 //#include "../Bpacket/Bpacket.hpp"
 #include "../Code78/Code78.hpp"
-#include "../../Process/Process.hpp"
+#include "../../TimedScheduler/TimedScheduler.hpp"
 #include "../../DataStore/RingBuffer.hpp"
 
 namespace MAP {
@@ -167,9 +172,15 @@ inline void referencePacket(MAPPacket *packet){
 // Dereference a packet, and free the packet
 // if it is no longer referenced by anyone.
 inline void dereferencePacket(MAPPacket *packet){
-  if(packet->decrementReferenceCount() == 0)
+  if(packet->decrementReferenceCount() == 0){
+// HEAP
+    MemoryPool* memoryPool = packet->get_memoryPool();
   // Packet frees its own Buffers.
     delete packet;
+  // Convention is that packet is stored in its own Pool.
+    if(memoryPool != NULL)
+      memoryPool->deallocate(sizeof(MAPPacket)); 
+  }
 }
 
 }
@@ -180,7 +191,7 @@ inline void dereferencePacket(MAPPacket *packet){
 namespace MAP {
 
 // Allocate a new packet.
-bool allocateNewPacket(MAPPacket** const packet, const uint16_t &capacity);
+bool allocateNewPacket(MAPPacket** const packet, const uint16_t &capacity, MemoryPool* const memoryPool);
 
 // PacketChecksumGenerator: inline MAPPacketSink.
 // Appends checksums to packets as necessary.
@@ -198,7 +209,7 @@ public:
   { }
 
 // Generate a checksum for a packet.
-  Status::Status_t sinkPacket(MAPPacket* packet, MAPPacket::Offset_t headerOffset = 0){
+  Status::Status_t sinkPacket(MAPPacket* packet, MAPPacket::HeaderOffset_t headerOffset = 0){
     assert(nextSink != NULL);
     assert(packet != NULL);
 
@@ -224,7 +235,7 @@ public:
   { }
 
 // Validate a packet.
-  Status::Status_t sinkPacket(MAP::MAPPacket *packet, MAPPacket::Offset_t headerOffset = 0){
+  Status::Status_t sinkPacket(MAP::MAPPacket *packet, MAPPacket::HeaderOffset_t headerOffset = 0){
     assert(nextSink != NULL);
     assert(packet != NULL);
 

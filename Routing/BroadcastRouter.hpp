@@ -1,3 +1,8 @@
+// Copyright (C) 2010, Aret N Carlsen (aretcarlsen@autonomoustools.com).
+// Dynamic routing handlers (C++).
+// Licensed under GPLv3 and later versions. See license.txt or <http://www.gnu.org/licenses/>.
+
+
 // MAP routing devices
 //
 // StaticLocalMAPServerBinding; BroadcastRouter; MAPPacketStore; SimpleServerProcess

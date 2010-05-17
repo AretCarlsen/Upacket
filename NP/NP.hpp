@@ -122,10 +122,7 @@ public:
     // Regular data
     }else{
   // Enlarge the packet, if necessary
-      if( packet->is_full() && !(expandPacketCapacity()) )
-        return Status::Status__Busy;
-
-      packet->append(data);
+      if(! packet->sinkExpand(data, PacketCapacity__Increment)) return Status::Status__Busy;
     }
 
     return Status::Status__Good;
@@ -145,8 +142,6 @@ public:
 // Expand the current packet.
   bool expandPacketCapacity(){
     assert(packet != NULL);
-
-    return packet->set_capacity(packet->get_capacity() + PacketCapacity__Increment);
   }
 
 };
