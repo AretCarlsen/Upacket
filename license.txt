@@ -1,6 +1,5 @@
 Copyright (C) 2010, Aret N Carlsen (aretcarlsen@autonomoustools.com).
 MAP, MEP, and related protocol handlers / routers / servers. C++.
-Licensed under GPLv3 and later versions.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
