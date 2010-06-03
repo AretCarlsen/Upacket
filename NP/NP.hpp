@@ -1,3 +1,11 @@
+// Copyright (C) 2010, Aret N Carlsen (aretcarlsen@autonomoustools.com).
+// NP (Newlien Protocol) <-> MAP packet handling (C++).
+// Licensed under GPLv3 and later versions. See license.txt or <http://www.gnu.org/licenses/>.
+
+
+// WARNING: This library has not been updated in several library versions.
+// It is NOT in an operational state.
+
 #pragma once
 
 #include "../../DataTransfer/DataTransfer.hpp"
