@@ -9,9 +9,9 @@
 
 #pragma once
 
-#include "../MAP/MAP.hpp"
-#include "../../Process/Process.hpp"
-#include "../../DataStore/Buffer.hpp"
+#include <Upacket/MAP/MAP.hpp>
+#include <MapOS/TimedScheduler/TimedScheduler.hpp>
+#include <ATcommon//DataStore/Buffer.hpp>
 
 // Router which broadcasts received packets to all configured sinks.
 class BroadcastRouter : public MAP::MAPPacketSink {

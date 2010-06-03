@@ -5,9 +5,8 @@
 
 #pragma once
 
-#include "../globals.hpp"
-#include "../../DataStore/Buffer.hpp"
-#include "../MAP/MAP.hpp"
+#include <ATcommon/DataStore/Buffer.hpp>
+#include <Upacket/MAP/MAP.hpp>
 
 // SimpleServer class
 class SimpleServer : public MAP::MAPPacketSink {
@@ -75,6 +74,6 @@ protected:
   bool prepareReply(MAP::MAPPacket **replyPacket, MAP::MAPPacket *packet, uint16_t data_capacity);
   bool replyBoolean(bool value);
   bool replyC78(uint32_t value);
-  bool replyC78String(uint8_t* const buf, uint16_t buf_len);
+  bool replyC78String(const uint8_t* buf, uint16_t buf_len);
 };
 

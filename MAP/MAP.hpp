@@ -11,15 +11,18 @@
 
 #pragma once
 
-#include "../globals.hpp"
+#ifndef DEBUGprint_MAP
+#define DEBUGprint_MAP(...)
+#endif
+
 // Dynamic arrays
-#include "../../DataStore/Buffer.hpp"
+#include <ATcommon/DataStore/Buffer.hpp>
 // Status codes
-#include "../../Status/Status.hpp"
+#include <ATcommon/Status/Status.hpp>
 //#include "../Bpacket/Bpacket.hpp"
-#include "../Code78/Code78.hpp"
-#include "../../TimedScheduler/TimedScheduler.hpp"
-#include "../../DataStore/RingBuffer.hpp"
+#include <Upacket/Code78/Code78.hpp>
+#include <MapOS/TimedScheduler/TimedScheduler.hpp>
+#include <ATcommon/DataStore/RingBuffer.hpp>
 
 namespace MAP {
 // Data type

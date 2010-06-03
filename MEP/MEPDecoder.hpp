@@ -10,9 +10,9 @@
 #pragma once
 
 #include "MEP.hpp"
-#include "../../DataTransfer/DataTransfer.hpp"
-#include "../../StateMachine/StateMachine.hpp"
-#include "../MAP/MAP.hpp"
+#include <ATcommon/DataTransfer/DataTransfer.hpp>
+#include <ATcommon/StateMachine/StateMachine.hpp>
+#include <Upacket/MAP/MAP.hpp>
 
 // Begin MEP namespace
 namespace MEP {

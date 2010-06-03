@@ -3,6 +3,11 @@
 // Licensed under GPLv3 and later versions. See license.txt or <http://www.gnu.org/licenses/>.
 
 
+#ifndef DEBUGprint_ESRV
+#define DEBUGprint_ESRV(...)
+#endif
+
+
 #include "SimpleServer.hpp"
 
 class EchoServer : public SimpleServer, public Process {
@@ -20,7 +25,7 @@ public:
     if(offsetPacket.packet == NULL)
       return Status::Status__Good;
 
-    DEBUGprint_MISC("EchSrv: proc pack\n");
+    DEBUGprint_ESRV("EchSrv: proc pack\n");
 
     MAP::MAPPacket *replyPacket;
   // Attempt to prepare a reply packet large enough to contain the received packet's contents.
@@ -38,7 +43,7 @@ public:
   // Send the packet on its way.
       sendPacket(replyPacket);
     }else{
-      DEBUGprint_MISC("EchSrv: reply prep fld\n");
+      DEBUGprint_ESRV("EchSrv: reply prep fld\n");
     }
   // Finished with the source packet.
     finishedWithPacket();

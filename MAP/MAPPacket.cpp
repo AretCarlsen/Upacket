@@ -4,7 +4,7 @@
 
 
 #include "MAP.hpp"
-#include "../PosixCRC32ChecksumEngine/PosixCRC32ChecksumEngine.hpp"
+#include <Upacket/PosixCRC32ChecksumEngine/PosixCRC32ChecksumEngine.hpp>
 
 // Sink a numeric value in C78-encoded big-endian format.
 bool MAP::MAPPacket::sinkC78(const uint32_t value, const Capacity_t capacity_increment, const Capacity_t capacity_limit){
@@ -68,6 +68,7 @@ bool MAP::MAPPacket::sourceC78String(Data_t *strBuf, Capacity_t &read_len, Capac
     strBuf++; data_ptr++;
     read_len++;
   }
+  data_ptr--;
 
   return true;
 }

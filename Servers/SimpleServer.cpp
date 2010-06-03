@@ -2,6 +2,15 @@
 // Fundamental MAP servers (C++).
 // Licensed under GPLv3 and later versions. See license.txt or <http://www.gnu.org/licenses/>.
 
+#ifndef DEBUGprint_SS
+#define DEBUGprint_SS(...)
+#endif
+#ifndef DEBUG_SS
+#define DEBUG_SS(...)
+#endif
+#ifndef DEBUGprint
+#define DEBUGprint(...)
+#endif
 
 #include "SimpleServer.hpp"
 
@@ -89,6 +98,7 @@ bool SimpleServer::prepareReply(MAP::MAPPacket **replyPacket_ptr_ptr, MAP::MAPPa
 // Prepare a boolean reply packet.
 // Packet contains a single byte, 1 for true, 0 for false.
 bool SimpleServer::replyBoolean(bool value){
+  DEBUGprint_SS("rB2:%d;", (value? 1:0));
   // Attempt to prepare reply packet and sink the single content byte.
   MAP::MAPPacket *replyPacket;
   if(! SimpleServer::prepareReply(&replyPacket, offsetPacket.packet, sizeof(bool))) return false;
@@ -100,6 +110,7 @@ bool SimpleServer::replyBoolean(bool value){
 // Prepare a Code78 reply packet.
 // Packet contains a variable number of bytes, based on the numeric value given.
 bool SimpleServer::replyC78(uint32_t value){
+  DEBUGprint_SS("rC:%d;", value);
   // Attempt to prepare reply packet (if memory available etc).
   MAP::MAPPacket *replyPacket;
   // Educated guess as to C78 size.
@@ -109,7 +120,19 @@ bool SimpleServer::replyC78(uint32_t value){
   return sendPacket(replyPacket);
 }
 
-bool SimpleServer::replyC78String(uint8_t* const buf, uint16_t buf_len){
+namespace Debug {
+  void printC78S(const uint8_t* buf, uint16_t buf_len){
+    for(; buf_len > 0; buf_len--){
+      DEBUGprint("%x;", *buf); buf++;
+    }
+  }
+}
+
+bool SimpleServer::replyC78String(const uint8_t* buf, uint16_t buf_len){
+  DEBUGprint_SS("rCSX:");
+  DEBUG_SS(Debug::printC78S(buf, buf_len));  
+  DEBUGprint_SS("\n");
+
   // Attempt to prepare reply packet (if memory available etc).
   MAP::MAPPacket *replyPacket;
 
@@ -120,6 +143,7 @@ bool SimpleServer::replyC78String(uint8_t* const buf, uint16_t buf_len){
   // Sink string itself
   for(; buf_len > 0; buf_len--){
     if(! replyPacket->sinkData(*buf)){ MAP::dereferencePacket(replyPacket); return false; }
+    buf++;
   }
 
   // Reference and transmit packet.

@@ -5,8 +5,17 @@
 
 #pragma once
 
-#include "../globals.hpp"
-#include "../MAP/MAP.hpp"
+#ifndef DEBUGprint_AG
+#define DEBUGprint_AG(...)
+#endif
+#ifndef DEBUG_AG
+#define DEBUG_AG(...)
+#endif
+#ifndef DEBUGprint
+#define DEBUGprint(...)
+#endif
+
+#include <Upacket/MAP/MAP.hpp>
 
 struct AddressFilter {
 public:
@@ -94,24 +103,24 @@ public:
 
   // Note that edge is copied by value.
   bool sinkEdge(const AddressFilter &newEdge){
-    DEBUGprint_RARE("AG: edge sink: ");
+    DEBUGprint_AG("AG: edge sink: ");
     for(AddressFilter *filter = addressEdges.front(); filter < addressEdges.back(); filter++){
       DEBUG_AG(filter->debugPrintValues());
   // Check for an existing edge that matches exactly
       if(*filter == newEdge){
-        DEBUGprint_RARE("fld (exists)\n");
+        DEBUGprint_AG("fld (exists)\n");
         return true;
       }
   // Check for an existing edge that is inactive
       if(filter->mode == AddressFilter::Mode__Inactive){
-        DEBUGprint_RARE("scs (rplc)\n");
+        DEBUGprint_AG("scs (rplc)\n");
         *filter = newEdge;
         return true;
       }
     }
 
     bool skExp = addressEdges.sinkExpand(newEdge, DefaultCapacityIncrement, DefaultMaxCapacity);
-    DEBUGprint_RARE("skExp: %d\n", (skExp? 1 : 0));
+    DEBUGprint_AG("skExp: %d\n", (skExp? 1 : 0));
     return skExp;
   }
 

@@ -4,8 +4,12 @@
 
 // MEPDecoder class implementation
 
+#ifndef DEBUGprint_MEP
+#define DEBUGprint_MEP(...)
+#endif
+
 #include "MEPDecoder.hpp"
-#include "../../StateMachine/StateMachine.hpp"
+#include <ATcommon/StateMachine/StateMachine.hpp>
 
 // If Busy is returned, then the Decoder was not able to allocate sufficient memory.
 // The caller may try again.

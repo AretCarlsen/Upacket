@@ -3,7 +3,7 @@
 // Licensed under GPLv3 and later versions. See license.txt or <http://www.gnu.org/licenses/>.
 
 #include "MAP.hpp"
-#include "../PosixCRC32ChecksumEngine/PosixCRC32ChecksumEngine.hpp"
+#include <Upacket/PosixCRC32ChecksumEngine/PosixCRC32ChecksumEngine.hpp>
 #include "MAPPacket.cpp"
 
 // Allocate a new packet.

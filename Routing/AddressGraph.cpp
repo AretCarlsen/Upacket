@@ -52,7 +52,7 @@ Status::Status_t AddressGraph::sinkPacket(MAP::MAPPacket* const packet, MAP::MAP
     DEBUGprint_AG("AG::sP: pack addy X%x/X%x\n", destAddressType, *destAddressValue, localAddressType, localAddressValue);
   }
   if((destAddressType == localAddressType) && (*destAddressValue == localAddressValue)){
-    DEBUGprint_RARE("AG::sP: cmd packet match\n");
+    DEBUGprint_AG("AG::sP: cmd packet match\n");
     process_command_packet(packet, headerOffset);
     // Stop processing, to avoid loops.
   }else{
@@ -70,7 +70,7 @@ Status::Status_t AddressGraph::sinkPacket(MAP::MAPPacket* const packet, MAP::MAP
 }
 
 void AddressGraph::command_add(MAP::MAPPacket* const packet, MAP::Data_t *data_ptr){
-  DEBUGprint_RARE("cmd_add() st\n");
+  DEBUGprint_AG("cmd_add() st\n");
   AddressFilter newEdge;
 
   // Read sinkIndex

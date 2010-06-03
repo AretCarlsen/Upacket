@@ -9,9 +9,9 @@
 
 #pragma once
 
-#include "../../DataTransfer/DataTransfer.hpp"
+#include <ATcommon/DataTransfer/DataTransfer.hpp>
 // Status codes
-#include "../../Status/Status.hpp"
+#include <ATcommon/Status/Status.hpp>
 
 namespace MEP {
 // Control prefix information

@@ -7,13 +7,19 @@
 #pragma once
 
 #include "MEP.hpp"
-#include "../MAP/MAP.hpp"
-#include "../../StateMachine/StateMachine.hpp"
-#include "../../DataTransfer/DataTransfer.hpp"
-#include "../../TimedScheduler/TimedScheduler.hpp"
+#include <Upacket/MAP/MAP.hpp>
+#include <ATcommon/StateMachine/StateMachine.hpp>
+#include <ATcommon/DataTransfer/DataTransfer.hpp>
+#include <MapOS/TimedScheduler/TimedScheduler.hpp>
 
+/*
 #ifndef NULL
 #define NULL 0
+#endif
+*/
+
+#ifndef DEBUGprint_MEP
+#define DEBUGprint_MEP(...)
 #endif
 
 namespace MEP {

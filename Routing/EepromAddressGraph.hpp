@@ -3,6 +3,14 @@
 // Licensed under GPLv3 and later versions. See license.txt or <http://www.gnu.org/licenses/>.
 
 
+#ifndef DEBUGprint_EEP
+#define DEBUGprint_EEP(...)
+#endif
+#ifndef DEBUG_EEP
+#define DEBUG_EEP(...)
+#endif
+
+
 #include "AddressGraph.hpp"
 
 // Friend of AddressGraph
