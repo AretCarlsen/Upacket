@@ -3,6 +3,8 @@
 // Licensed under GPLv3 and later versions. See license.txt or <http://www.gnu.org/licenses/>.
 
 
+#include <ATcommon/Status/Status.hpp>
+
 namespace MAP {
 
 class MAPPacketSink {
